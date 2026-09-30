@@ -345,6 +345,17 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return send(res, 200, { files }, origin)
   }
   const driveFile = /^\/drive\/v3\/files\/([^/]+)$/.exec(path)
+  if (driveFile && req.method === 'GET') {
+    const found = sheetFor(req, driveFile[1] ?? '')
+    if (typeof found === 'number') return send(res, found, { error: { code: found } }, origin)
+    const f = found.sheet
+    return send(
+      res,
+      200,
+      { id: f.id, appProperties: f.appProperties, trashed: !!f.trashed },
+      origin,
+    )
+  }
   if (driveFile && req.method === 'PATCH') {
     const found = sheetFor(req, driveFile[1] ?? '')
     if (typeof found === 'number') return send(res, found, { error: { code: found } }, origin)

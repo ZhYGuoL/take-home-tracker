@@ -122,6 +122,11 @@ export class SheetSync implements Persistence {
   private spreadsheet(): Promise<Spreadsheet> {
     this.sheet ??= this.api.findOrCreate().then(
       async (s) => {
+        const before = await this.cache.sheetId()
+        // Rows this device sent to a file that another device then merged into this one.
+        if (before && before !== s.id && (await this.api.mergedInto(before)) === s.id) {
+          await this.api.absorb(s, before)
+        }
         await this.cache.setSheetId(s.id)
         return s
       },
@@ -230,6 +235,8 @@ export class SheetSync implements Persistence {
 
   private async pullOnce(): Promise<void> {
     this.pulls++
+    // Look the file up again, in case she renamed a tab, or another device merged a file.
+    this.sheet = null
     try {
       const sheet = await this.spreadsheet()
       await this.push()

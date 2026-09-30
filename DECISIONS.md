@@ -83,8 +83,11 @@ The spreadsheet has two tabs.
   The app rewrites it from the store after each sync.
   Nothing reads it back, so an edit there has no effect, and a lost rewrite only makes it stale until the next one.
 - The app finds each tab by its numeric id, which stays the same when she renames a tab.
+  Each pull looks the file up again, so a rename while the app is open works at the next pull.
 - Two devices can open the app for the first time at once, and each make a file.
-  Each device then keeps the oldest file and puts the file it made in the bin, so their saves meet in one Sheet.
+  When a device finds more than one tracker file, it copies the rows of the newer files into the oldest, then puts them in the bin with a `mergedInto` mark.
+  A device that still wrote to a merged file copies its rows over at its next pull.
+  A file that she put in the bin herself has no mark, so the app leaves it alone.
 
 On each sync, the `records` tab is the truth.
 Local state is the `records` tab plus the saves on this device that did not upload yet.

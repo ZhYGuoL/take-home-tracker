@@ -77,28 +77,60 @@ export class SheetsApi {
    */
   async findOrCreate(): Promise<Spreadsheet> {
     let files = await this.files()
-    const labeled = files.find((f) => f.appProperties?.takeHomeTracker === 'records-v1')
-    let id = labeled?.id ?? files[0]?.id
-    if (!id) {
-      id = await this.create()
-      // Two devices can open the app for the first time at once, and each make a file. Each
-      // keeps the oldest, so their saves meet in one Sheet. The newer, empty one goes to the bin.
+    if (files.length === 0) {
+      const made = await this.create()
+      // Two devices can open the app for the first time at once. Listing again finds a file
+      // the other one made, and the merge below joins the two. Drive's list can lag, so the
+      // file this call made counts even if the list does not show it yet.
       files = await this.files()
-      const oldest = files[0]?.id
-      if (oldest && oldest !== id) {
-        await this.call(`${this.access.drive}/drive/v3/files/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ trashed: true }),
-        })
-        id = oldest
-      }
+      if (!files.some((f) => f.id === made)) files = [...files, { id: made }]
     }
-    if (!files.find((f) => f.id === id)?.appProperties?.takeHomeTracker) {
-      await this.call(`${this.access.drive}/drive/v3/files/${id}`, {
+    const [keep, ...extra] = files
+    if (!keep) throw new GoogleError(404)
+    const sheet = await this.open(keep.id)
+    if (keep.appProperties?.takeHomeTracker !== 'records-v1') {
+      await this.call(`${this.access.drive}/drive/v3/files/${keep.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ appProperties: { takeHomeTracker: 'records-v1' } }),
       })
     }
+    // More than one file: two first visits at once, or an attempt that failed halfway. Their
+    // rows join the oldest, where newest-wins sorts them out (D3). The newer file goes to the
+    // bin, marked, so a device that still writes to it can follow (see `mergedInto`).
+    for (const f of extra) {
+      await this.absorb(sheet, f.id)
+      await this.call(`${this.access.drive}/drive/v3/files/${f.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          trashed: true,
+          appProperties: { takeHomeTracker: 'merged', mergedInto: keep.id },
+        }),
+      })
+    }
+    return sheet
+  }
+
+  /** Adds every record row of another tracker file to `into`. */
+  async absorb(into: Spreadsheet, fromId: string): Promise<void> {
+    const rows = await this.readRows(await this.open(fromId))
+    if (rows.length > 0) await this.append(into, rows)
+  }
+
+  /** The file that this one was merged into, or null. */
+  async mergedInto(id: string): Promise<string | null> {
+    try {
+      const f = await this.call<{ appProperties?: Record<string, string> }>(
+        `${this.access.drive}/drive/v3/files/${id}?fields=${q('appProperties')}`,
+      )
+      return f.appProperties?.mergedInto ?? null
+    } catch (err) {
+      if (err instanceof GoogleError && err.status === 404) return null
+      throw err
+    }
+  }
+
+  /** A tracker file with its tabs, found by their ids, so a renamed tab still works. */
+  private async open(id: string): Promise<Spreadsheet> {
     const meta = await this.call<{
       sheets?: Array<{ properties?: { sheetId?: number; title?: string } }>
     }>(`${this.access.sheets}/v4/spreadsheets/${id}?fields=${q('sheets.properties')}`)

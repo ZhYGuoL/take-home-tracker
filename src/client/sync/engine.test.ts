@@ -308,4 +308,22 @@ describe('SheetSync', () => {
     )
     expect(await other.load()).toEqual([])
   })
+
+  it('rows this device sent to a file that was merged away follow into the kept file', async () => {
+    const cache = localCache('acct-merged')
+    await cache.setSheetId('old-2')
+    const kept = { id: 'keep-1', records: { sheetId: 0, title: 'records' }, view: null }
+    const absorbed: Array<[string, string]> = []
+    const api = {
+      findOrCreate: async () => kept,
+      mergedInto: async (id: string) => (id === 'old-2' ? 'keep-1' : null),
+      absorb: async (into: { id: string }, from: string) => void absorbed.push([into.id, from]),
+      readRows: async () => [],
+      append: async () => {},
+    }
+    const sync = new SheetSync(api as unknown as SheetsApi, cache, () => [])
+    await sync.pull()
+    expect(absorbed).toEqual([['keep-1', 'old-2']])
+    expect(await cache.sheetId()).toBe('keep-1')
+  })
 })

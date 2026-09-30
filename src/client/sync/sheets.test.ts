@@ -76,12 +76,30 @@ describe('SheetsApi.findOrCreate', () => {
     expect((await api.findOrCreate()).id).toBe('other-1')
     const patches = calls.filter((c) => c.method === 'PATCH')
     expect(patches.map((c) => [c.url, c.body])).toEqual([
-      ['https://drive.test/drive/v3/files/new-1', { trashed: true }],
       [
         'https://drive.test/drive/v3/files/other-1',
         { appProperties: { takeHomeTracker: 'records-v1' } },
       ],
+      [
+        'https://drive.test/drive/v3/files/new-1',
+        { trashed: true, appProperties: { takeHomeTracker: 'merged', mergedInto: 'other-1' } },
+      ],
     ])
+  })
+
+  it('moves the rows of a newer tracker file into the oldest before the bin', async () => {
+    const { api, calls } = google([
+      { id: 's-1', appProperties: { takeHomeTracker: 'records-v1' } },
+      { id: 's-2', appProperties: { takeHomeTracker: 'records-v1' } },
+    ])
+    expect((await api.findOrCreate()).id).toBe('s-1')
+    const append = calls.find((c) => c.url.includes(':append'))
+    expect(append?.url).toContain('/spreadsheets/s-1/')
+    expect(append?.body).toEqual({ values: [['a']] })
+    const read = calls.findIndex((c) => c.url.includes('/spreadsheets/s-2/values/'))
+    const bin = calls.findIndex((c) => c.method === 'PATCH' && c.url.endsWith('/files/s-2'))
+    expect(read).toBeGreaterThan(-1)
+    expect(bin).toBeGreaterThan(read)
   })
 
   it('finds the records tab by its id after she renames it, and reads it by its new name', async () => {

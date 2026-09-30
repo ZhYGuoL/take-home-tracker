@@ -70,13 +70,21 @@ test('notes that grow past one Sheets cell still reach her Sheet', async ({ page
   await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
 })
 
-test('after she renames the records tab by hand, saves still reach it', async ({ page }) => {
+test('after she renames the records tab while the app is open, Retry catches up', async ({
+  page,
+}) => {
   await seed(page, [person('Tab Renamer')])
+  await page.getByRole('radio', { name: /All/ }).click()
+  await expect(page.getByRole('button', { name: 'Tab Renamer' })).toBeVisible()
   await page.request.post(`${FAKE_GOOGLE_URL}/__rename-tab`, {
     data: { sub: 'fake-avery', from: 'records', to: 'Data' },
   })
-  await page.reload()
   await addCandidate(page, { name: 'After Rename' })
+  await page.getByRole('button', { name: 'Close' }).click()
+  const status = page.getByRole('status').filter({ hasText: 'Not synced' })
+  await expect(status).toBeVisible()
+  await status.getByRole('button', { name: 'Retry' }).click()
+  await expect(status).toHaveCount(0)
   await expect
     .poll(async () => {
       const sheets = (await (
@@ -87,7 +95,6 @@ test('after she renames the records tab by hand, saves still reach it', async ({
       return JSON.stringify(sheets[0]?.tabs.Data)
     })
     .toContain('After Rename')
-  await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
 })
 
 test('deleting a candidate removes every row of theirs from her Sheet', async ({ page }) => {
