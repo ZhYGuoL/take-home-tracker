@@ -14,8 +14,8 @@ export function SignIn({ problem, setUp }: { problem: SignInProblem; setUp: bool
         )}
         {problem === 'drive' && (
           <p className="signin-note" role="alert">
-            The tracker needs Google Drive access to keep your list. Continue again, and leave the
-            Drive box ticked.
+            The tracker needs Google Drive access to keep your list. Continue again, and tick the
+            Drive box.
           </p>
         )}
         {setUp ? (
