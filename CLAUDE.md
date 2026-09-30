@@ -14,7 +14,7 @@ If the context is new, read these before you do anything:
 
 ## Commands
 
-- `pnpm dev` starts the app and the Worker on one port, with a local fake Google.
+- `pnpm dev` starts the app and the Worker on one port. From M5 it also uses a local fake Google.
 - `pnpm check` is the fast check: lint, typecheck, unit tests. A pre-commit hook runs it.
 - `pnpm verify` is the full verify: the fast check, the production build, and the end-to-end tests.
 
