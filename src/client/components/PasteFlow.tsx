@@ -280,8 +280,8 @@ function Confirm({
             </select>
           </Field>
           {matchVia && draft.target === matchVia.id && (
-            <output className="readout num" aria-label="Matched on">
-              {matchVia.via}
+            <output className="readout" aria-label="Matched on">
+              Matched on <span className="num">{matchVia.via}</span>
             </output>
           )}
         </fieldset>
