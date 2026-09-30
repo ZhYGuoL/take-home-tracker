@@ -163,7 +163,15 @@ const NO_ROLE = '~'
 function listParam<T extends string>(p: URLSearchParams, key: string, allowed?: readonly T[]): T[] {
   const raw = p.get(key)
   if (!raw) return []
-  const values = raw.split(',').map((v) => (v === NO_ROLE ? '' : decodeURIComponent(v))) as T[]
+  const values = raw.split(',').flatMap((v) => {
+    if (v === NO_ROLE) return ['']
+    // A hand-edited or cut-off link can hold a bad escape. Drop that value, keep the rest.
+    try {
+      return [decodeURIComponent(v)]
+    } catch {
+      return []
+    }
+  }) as T[]
   return allowed ? values.filter((v) => allowed.includes(v)) : values
 }
 

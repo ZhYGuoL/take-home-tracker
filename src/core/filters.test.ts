@@ -199,6 +199,13 @@ describe('query string', () => {
     expect(f.date).toBeNull()
   })
 
+  it('drops a value with a bad escape instead of failing', () => {
+    // URLSearchParams decodes "%25" to "%", which decodeURIComponent cannot read again.
+    const f = filtersFromQuery(new URLSearchParams('role=%25,Designer&stage=sent'))
+    expect(f.roles).toEqual(['Designer'])
+    expect(f.stages).toEqual(['sent'])
+  })
+
   it('counts active filters', () => {
     expect(activeCount({ ...NO_FILTERS, stages: ['sent', 'passed'], q: 'x' })).toBe(3)
   })
