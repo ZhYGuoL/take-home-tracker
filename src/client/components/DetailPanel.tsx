@@ -216,11 +216,15 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+/** A time on one line and how long ago on the next, as in the table, so no line breaks inside. */
 function When({ iso, zone, now }: { iso: string | null; zone: string; now: number }) {
   if (!iso) return <span className="muted">None</span>
   return (
-    <span className="num">
-      {formatDateTime(iso, zone)} {zoneName(iso, zone)} · {relative(iso, now)}
+    <span className="stack">
+      <span className="num">
+        {formatDateTime(iso, zone)} {zoneName(iso, zone)}
+      </span>
+      <span className="num muted">{relative(iso, now)}</span>
     </span>
   )
 }
@@ -252,8 +256,9 @@ function Facts({
     <dl className="facts">
       <Fact label="Deadline">
         {d?.dateOnly ? (
-          <span className="num">
-            {formatDeadline(d, zone)} · {relative(d.at, now)}
+          <span className="stack">
+            <span className="num">{formatDeadline(d, zone)}</span>
+            <span className="num muted">{relative(d.at, now)}</span>
           </span>
         ) : d ? (
           <span className="stack">
