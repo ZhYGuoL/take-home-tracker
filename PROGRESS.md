@@ -63,3 +63,27 @@
 - Reviewer findings fixed, including the M3 fixes it also reviewed: the privacy claim (zero retention, not only no training), the whole roster going to the model, model picks that bypassed the first-name rule, deadlines from paste time on the model path, a scorer that inflated numbers, an eval that hid model failures, an Outlook body lost under a subject line, and a one-word name that blocked a match.
 - Evidence: F3 in `src/core/derive.test.ts` (500 random automatic histories never reach Advanced or Passed), `src/core/paste.test.ts`, `test/e2e/candidates.spec.ts`, and the model reading, which has no stage field. F9 in `test/e2e/candidates.spec.ts` ("with the model off, adding and advancing a candidate by hand works end to end") and `src/client/lib/extract.test.ts`. `pnpm verify` exit 0: 297 unit tests, 120 e2e tests, 4 skipped as desktop-only.
 - F3 and F9 pass.
+
+## M5 Sign-in and isolation, and phone width - done
+
+- Sign-in is Google only, with the code flow and PKCE in the Worker (D4). The session is a sealed, HttpOnly cookie. A signed-out visitor gets the sign-in screen, and every API route refuses them.
+- Each person's data lives in a Google Sheet in their own Drive, with the `drive.file` scope. The app sees only files it made, so one user can never read another user's Sheet.
+- `pnpm dev` and the tests use a local fake Google with three fictional accounts. The dev entry answers only on localhost, and the production bundle check fails if any dev code reaches it (D5).
+- Sync: saves go to an IndexedDB queue first, then to the Sheet. Pulls run on load, focus, and every minute. "Not synced" and Retry show when Google cannot be reached (D18).
+- Reviewer findings fixed:
+  - Deleting a candidate also deleted a message that was moved off it (blocker). The purge rules are now one pure function, and a tombstone stays so an offline edit cannot bring a candidate back (D3).
+  - A save made during a push was never sent, and a pull could hide a save that was just sent.
+  - A purge that a closed tab never finished stayed forever. Any device now purges a delete older than 10 minutes.
+  - A token that Google refused was never replaced. Sign-out ends every device, and the others now go to sign-in at their next call (D4).
+  - Sign-out dropped unsent saves without a word. It now pushes first, and asks if saves are still unsent.
+  - A sign-in without Drive access left the app broken. The callback now asks her to continue again with Drive.
+  - One oversized row blocked every save after it. Long data now spreads over several cells, and the text boxes have a limit.
+  - A hand-edited row with a missing field could blank the app. Rows are now checked field by field.
+  - A renamed records tab broke sync, and two first visits at once made two Sheets.
+  - The blocker steps could not be followed in order, and one put her email in a public file.
+- Also fixed while testing: a date-only deadline showed as 2:59 AM the next morning in another zone, the open detail panel covered "Not synced" and Retry, and the table scrolled sideways by 6 px on a 1280 px screen.
+- Evidence:
+  - F7: the whole e2e suite runs on the iPhone 15 WebKit profile, and `test/e2e/phone.spec.ts` checks 393, 375, and 320 px, including the sign-in screen.
+  - F8: `test/e2e/signin.spec.ts` (a signed-out visitor sees only the way in and the API gives nothing, one user never sees another on the same browser, Drive access), `test/e2e/sync.spec.ts` (sign-out clears the browser), `src/worker/auth.test.ts`, and `src/worker/app.test.ts`.
+  - `pnpm verify` exit 0: 349 unit tests, 163 e2e tests, 9 skipped because they apply to only one of the two screen sizes.
+- F7 and F8 pass.

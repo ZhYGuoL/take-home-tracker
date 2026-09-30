@@ -32,12 +32,12 @@
   {
     "id": "F7",
     "description": "Usable at phone width.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F8",
     "description": "Signed-out visitors see nothing. One user never sees another user's data.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F9",
