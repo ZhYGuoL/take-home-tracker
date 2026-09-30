@@ -6,7 +6,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.18.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
@@ -18,7 +18,7 @@
     "check": "biome check . && tsc -b && vitest run",
     "e2e": "playwright test",
     "verify": "pnpm check && pnpm e2e && pnpm build && node scripts/check-prod-bundle.ts",
-    "prepare": "git config core.hooksPath .githooks || true",
+    "prepare": "[ -d .git ] && git config core.hooksPath .githooks || true",
     "deploy": "vite build && node scripts/check-prod-bundle.ts && wrangler deploy --config dist/take_home_tracker/wrangler.json",
     "eval": "tsx eval/run.ts",
     "dev:app": "vite",
