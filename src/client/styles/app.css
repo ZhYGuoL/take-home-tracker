@@ -1050,3 +1050,11 @@
   margin-top: auto;
   padding-top: 8px;
 }
+
+.foot-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}

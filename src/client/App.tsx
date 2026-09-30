@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { type CandidateDraft, candidateFromDraft, submissionFromDraft } from '../core/draft'
 import {
   applyFilters,
@@ -184,11 +184,32 @@ export function App() {
       {session && (
         <footer className="foot">
           <span className="muted">{session.user.email}</span>
-          <button type="button" className="text-button" onClick={() => void session.signOut()}>
-            Sign out
-          </button>
+          <SignOut signOut={session.signOut} />
         </footer>
       )}
     </div>
+  )
+}
+
+/** Sign-out asks first when saves did not reach her Sheet, since signing out drops them. */
+function SignOut({ signOut }: { signOut: (force?: boolean) => Promise<number> }) {
+  const [unsent, setUnsent] = useState(0)
+  if (unsent > 0) {
+    return (
+      <span className="foot-confirm" role="alert">
+        {unsent === 1 ? '1 change is' : `${unsent} changes are`} not in your Google Sheet yet.
+        <button type="button" className="text-button strong" onClick={() => void signOut(true)}>
+          Sign out and lose them
+        </button>
+        <button type="button" className="text-button" onClick={() => setUnsent(0)}>
+          Stay signed in
+        </button>
+      </span>
+    )
+  }
+  return (
+    <button type="button" className="text-button" onClick={async () => setUnsent(await signOut())}>
+      Sign out
+    </button>
   )
 }

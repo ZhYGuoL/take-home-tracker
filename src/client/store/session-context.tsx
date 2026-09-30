@@ -9,7 +9,11 @@ export interface SessionValue {
     push(): Promise<void>
     pull(): Promise<void>
   }
-  signOut: () => Promise<void>
+  /**
+   * Sends what is unsent, then signs out. If saves still did not reach her Sheet, it does not
+   * sign out and returns how many, unless `force`.
+   */
+  signOut: (force?: boolean) => Promise<number>
 }
 
 const SessionContext = createContext<SessionValue | null>(null)

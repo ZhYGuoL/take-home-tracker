@@ -100,6 +100,37 @@ test.describe('signing out', () => {
     )
     expect(left).toBe(0)
   })
+
+  test('signing out with saves that did not reach her Sheet asks first', async ({ page }) => {
+    await signInAs(page, 'Casey Nguyen')
+    await expect.poll(async () => (await sheetsOf(page, 'fake-casey')).length).toBe(1)
+    await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())
+    await addCandidate(page, { name: 'Unsent Uri' })
+    await page.getByRole('button', { name: 'Close' }).click()
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    const footer = page.getByRole('contentinfo')
+    await expect(footer).toContainText('1 change is not in your Google Sheet yet.')
+    await footer.getByRole('button', { name: 'Stay signed in' }).click()
+    await expect(footer.getByRole('button', { name: 'Sign out' })).toBeVisible()
+
+    await page.unroute(`${FAKE_GOOGLE_URL}/**`)
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    // Google is back, so the save goes out first and sign-out needs no question.
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+    await signInAs(page, 'Casey Nguyen')
+    await page.getByRole('radio', { name: /All/ }).click()
+    await expect(page.getByRole('button', { name: 'Unsent Uri' })).toBeVisible()
+  })
+
+  test('she can still sign out and let unsent saves go', async ({ page }) => {
+    await signInAs(page, 'Casey Nguyen')
+    await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())
+    await addCandidate(page, { name: 'Dropped Dana' })
+    await page.getByRole('button', { name: 'Close' }).click()
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await page.getByRole('button', { name: 'Sign out and lose them' }).click()
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+  })
 })
 
 test('her Sheet gets a readable candidates tab', async ({ page }) => {

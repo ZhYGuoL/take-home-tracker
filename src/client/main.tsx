@@ -38,11 +38,17 @@ async function boot() {
   const value = {
     user: session.user,
     sync,
-    async signOut() {
+    async signOut(force = false) {
+      if (!force) {
+        await sync.push()
+        const unsent = (await cache.pending()).length
+        if (unsent > 0) return unsent
+      }
       // This browser forgets her data too, so the next person on it sees nothing of hers.
       await signOut()
       await cache.clear()
       window.location.assign('/')
+      return 0
     },
   }
   root.render(
