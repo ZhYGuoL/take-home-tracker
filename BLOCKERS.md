@@ -45,3 +45,58 @@ OpenRouter needs prepaid credits, which needs a card, so this needs your OK.
    npx wrangler secret put MODEL_ID
    ```
    and set `MODEL_ALLOWED_EMAILS` to the recruiter's Google email in `wrangler.jsonc` (see B4).
+
+## B3. A Google OAuth client, so real sign-in works
+
+**What.** Sign-in needs a Google OAuth client ID and secret. The run could not create one, because it may not create accounts or projects.
+Until then, `pnpm dev` and the tests use a local fake Google, and a deployed copy shows "Sign-in is not set up on this server."
+
+**Why it matters.** Without it, nobody can sign in to a deployed copy.
+
+**Steps.** None of this needs billing.
+1. At console.cloud.google.com, create a project named `take-home-tracker`.
+2. In APIs and Services, then Library, turn on "Google Sheets API" and "Google Drive API".
+3. In Google Auth Platform, set up the consent screen:
+   - App name `Take-homes`, your email as the support and developer contact.
+   - Audience: External.
+   - Data access: add only `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`, and `.../auth/drive.file`.
+4. Publish the app, so its status is "In production" (D4).
+   With only these scopes, Google does not ask for verification.
+   In "Testing" status, only listed test users can sign in, and every sign-in ends after 7 days.
+5. In Clients, create an OAuth client of type "Web application".
+   Add these authorized redirect URIs:
+   - `https://take-home-tracker.<your-subdomain>.workers.dev/auth/google/callback` (from B4, step 3)
+   - `http://localhost:5173/auth/google/callback` (only to try real Google locally)
+6. Keep the client ID and secret for B4, step 4.
+
+## B4. Deploy a copy (needs B3)
+
+**What.** Nothing is deployed. The run may not deploy.
+
+**Why it matters.** The recruiter can only use a copy on the web.
+
+**Steps.**
+1. Create a free Cloudflare account. It needs no card, and the free plan fails instead of billing (D1).
+2. In this folder, run `npx wrangler login`.
+3. Run `pnpm run deploy`. It builds, checks the production bundle (D5), and prints the `workers.dev` address.
+4. Set the three secrets. Run each command and paste the value when asked:
+   ```
+   npx wrangler secret put GOOGLE_CLIENT_ID
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   npx wrangler secret put SESSION_SECRET
+   ```
+   For `SESSION_SECRET`, paste the output of `openssl rand -base64 48`.
+5. Open the address, sign in with your own Google account, and add a test candidate.
+   Check that a Sheet named "Take-home tracker" appears in your Google Drive.
+6. Send the address to the recruiter yourself. The run never contacts her.
+7. Optional, only after B2: set `MODEL_ALLOWED_EMAILS` in `wrangler.jsonc` to her Google email, put `OPENROUTER_API_KEY` and `MODEL_ID` as secrets, and run `pnpm run deploy` again.
+
+## B5. A public GitHub repo (after B1)
+
+**What.** The repo has no remote, and nothing is pushed. The run may not create either.
+
+**Steps.**
+1. Decide B1 first.
+2. Create an empty repo under `ZhYGuoL`, for example `take-home-tracker`.
+3. `git remote add origin git@github.com:ZhYGuoL/take-home-tracker.git`
+4. `git push -u origin main`
