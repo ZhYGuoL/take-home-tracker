@@ -158,8 +158,10 @@ test.describe('signing out', () => {
     await page.getByRole('button', { name: 'Sign out' }).click()
     const footer = page.getByRole('contentinfo')
     await expect(footer).toContainText('1 change is not in your Google Sheet yet.')
+    // Focus moves into the question, and back to Sign out after it.
+    await expect(footer.getByRole('button', { name: 'Sign out and lose it' })).toBeFocused()
     await footer.getByRole('button', { name: 'Stay signed in' }).click()
-    await expect(footer.getByRole('button', { name: 'Sign out' })).toBeVisible()
+    await expect(footer.getByRole('button', { name: 'Sign out' })).toBeFocused()
 
     await page.unroute(`${FAKE_GOOGLE_URL}/**`)
     await page.getByRole('button', { name: 'Sign out' }).click()
@@ -180,9 +182,9 @@ test.describe('signing out', () => {
     await addCandidate(page, { name: 'Still Here' })
     await page.getByRole('button', { name: 'Close' }).click()
     await page.getByRole('button', { name: 'Sign out' }).click()
-    await page.getByRole('button', { name: 'Sign out and lose them' }).click()
+    await page.getByRole('button', { name: 'Sign out and lose it' }).click()
     const footer = page.getByRole('contentinfo')
-    await expect(footer).toContainText('Could not reach the server, so you are still signed in.')
+    await expect(footer).toContainText('No connection. You are still signed in.')
     await page.getByRole('radio', { name: /All/ }).click()
     await expect(page.getByRole('button', { name: 'Still Here' })).toBeVisible()
     // Back online, Try again finishes the sign-out.
@@ -197,7 +199,7 @@ test.describe('signing out', () => {
     await addCandidate(page, { name: 'Dropped Dana' })
     await page.getByRole('button', { name: 'Close' }).click()
     await page.getByRole('button', { name: 'Sign out' }).click()
-    await page.getByRole('button', { name: 'Sign out and lose them' }).click()
+    await page.getByRole('button', { name: 'Sign out and lose it' }).click()
     await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
   })
 })

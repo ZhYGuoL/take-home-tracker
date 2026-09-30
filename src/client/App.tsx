@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { type CandidateDraft, candidateFromDraft, submissionFromDraft } from '../core/draft'
 import {
   applyFilters,
@@ -192,41 +192,67 @@ export function App() {
 }
 
 /**
- * Sign-out asks first when saves did not reach her Sheet, since signing out drops them. If the
- * server cannot be reached, she stays signed in and can try again.
+ * Sign-out asks first when saves did not reach her Sheet, since signing out drops them. Without
+ * a connection, she stays signed in and can try again. Focus follows the question.
  */
 function SignOut({ signOut }: { signOut: (force?: boolean) => Promise<SignOutResult> }) {
   const [state, setState] = useState<{ unsent: number } | { offline: true; force: boolean }>()
+  const first = useRef<HTMLButtonElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const back = useRef(false)
+  useEffect(() => {
+    if (state) first.current?.focus()
+    else if (back.current) button.current?.focus()
+    back.current = false
+  }, [state])
   const run = async (force: boolean) => {
     const result = await signOut(force)
     setState('done' in result ? undefined : 'offline' in result ? { offline: true, force } : result)
   }
+  const stay = () => {
+    back.current = true
+    setState(undefined)
+  }
+  const stayButton = (
+    <button type="button" className="text-button" onClick={stay}>
+      Stay signed in
+    </button>
+  )
   if (state && 'offline' in state) {
     return (
       <span className="foot-confirm" role="alert">
-        Could not reach the server, so you are still signed in.
-        <button type="button" className="text-button strong" onClick={() => void run(state.force)}>
+        No connection. You are still signed in.
+        <button
+          ref={first}
+          type="button"
+          className="text-button strong"
+          onClick={() => void run(state.force)}
+        >
           Try again
         </button>
+        {stayButton}
       </span>
     )
   }
   if (state && state.unsent > 0) {
+    const one = state.unsent === 1
     return (
       <span className="foot-confirm" role="alert">
-        {state.unsent === 1 ? '1 change is' : `${state.unsent} changes are`} not in your Google
-        Sheet yet.
-        <button type="button" className="text-button strong" onClick={() => void run(true)}>
-          Sign out and lose them
+        {one ? '1 change is' : `${state.unsent} changes are`} not in your Google Sheet yet.
+        <button
+          ref={first}
+          type="button"
+          className="text-button strong"
+          onClick={() => void run(true)}
+        >
+          {one ? 'Sign out and lose it' : 'Sign out and lose them'}
         </button>
-        <button type="button" className="text-button" onClick={() => setState(undefined)}>
-          Stay signed in
-        </button>
+        {stayButton}
       </span>
     )
   }
   return (
-    <button type="button" className="text-button" onClick={() => void run(false)}>
+    <button ref={button} type="button" className="text-button" onClick={() => void run(false)}>
       Sign out
     </button>
   )
