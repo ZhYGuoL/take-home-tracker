@@ -5,6 +5,7 @@ import {
   deadlineAt,
   formatDate,
   formatDateTime,
+  formatDeadline,
   instantIn,
   isValidZone,
   localParts,
@@ -106,5 +107,13 @@ describe('formatting', () => {
       'Sat, Oct 3, 12:05 AM',
     )
     expect(formatDate('2026-10-02T21:00:00Z', 'Asia/Tokyo')).toBe('Oct 3')
+  })
+
+  it('shows a date-only deadline as the end of its day, not as a time the next morning', () => {
+    const d = deadlineAt('2026-09-28', null, 'America/Los_Angeles')
+    expect(formatDeadline(d, 'America/Los_Angeles')).toBe('Mon, Sep 28, end of day')
+    expect(formatDeadline(d, 'America/New_York')).toBe('Mon, Sep 28, end of day PDT')
+    const timed = deadlineAt('2026-09-28', '17:00', 'America/Los_Angeles')
+    expect(formatDeadline(timed, 'America/New_York')).toBe('Mon, Sep 28, 8:00 PM')
   })
 })

@@ -90,6 +90,18 @@ export function formatDateTime(iso: string, zone: string): string {
   return `${p.weekday}, ${p.month} ${p.day}, ${p.hour}:${p.minute} ${p.dayPeriod}`
 }
 
+/**
+ * A deadline as she reads it. A timed deadline shows in her zone. A date-only deadline
+ * shows its date and "end of day", with the agreed zone when it is not hers (D8).
+ */
+export function formatDeadline(d: Deadline, zone: string): string {
+  if (!d.dateOnly) return formatDateTime(d.at, zone)
+  const p = parts(d.at, d.zone, { weekday: 'short', month: 'short', day: 'numeric' })
+  const agreed = zoneName(d.at, d.zone)
+  const suffix = agreed === zoneName(d.at, zone) ? '' : ` ${agreed}`
+  return `${p.weekday}, ${p.month} ${p.day}, end of day${suffix}`
+}
+
 /** "Oct 2". */
 export function formatDate(iso: string, zone: string): string {
   const p = parts(iso, zone, { month: 'short', day: 'numeric' })

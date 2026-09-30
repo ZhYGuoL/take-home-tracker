@@ -6,7 +6,14 @@ import {
   useRef,
   useState,
 } from 'react'
-import { formatDateTime, instantIn, localParts, relative, zoneName } from '../../core/deadline'
+import {
+  formatDateTime,
+  formatDeadline,
+  instantIn,
+  localParts,
+  relative,
+  zoneName,
+} from '../../core/deadline'
 import { type CandidateDraft, candidateFromDraft, draftFromCandidate } from '../../core/draft'
 import { normalizeUrl, shortUrl } from '../../core/links'
 import { moveMessage } from '../../core/move'
@@ -238,7 +245,11 @@ function Facts({
   return (
     <dl className="facts">
       <Fact label="Deadline">
-        {d ? (
+        {d?.dateOnly ? (
+          <span className="num">
+            {formatDeadline(d, zone)} · {relative(d.at, now)}
+          </span>
+        ) : d ? (
           <span className="stack">
             <When iso={d.at} zone={zone} now={now} />
             {zoneName(d.at, d.zone) !== zoneName(d.at, zone) && (

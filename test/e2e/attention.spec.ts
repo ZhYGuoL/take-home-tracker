@@ -145,6 +145,28 @@ for (const [zone, shown] of [
   })
 }
 
+test.describe('a date-only deadline agreed in Los Angeles, seen from New York', () => {
+  test.use({ timezoneId: 'America/New_York' })
+
+  test('reads as the end of that day in PDT, not as 2:59 AM the next morning', async ({
+    page,
+  }, info) => {
+    const lou = person('Lou Brennan', { due: ['2026-10-02', null, LA] })
+    await page.clock.install({ time: NOW })
+    await seed(page, [lou])
+    await page.getByRole('radio', { name: /All/ }).click()
+    // The phone list shows only how long ago it was due. The table shows the date too.
+    if (info.project.name === 'desktop') {
+      await expect(rowOf(page, 'Lou Brennan')).toContainText('Fri, Oct 2, end of day PDT')
+    }
+    await expect(rowOf(page, 'Lou Brennan')).not.toContainText('2:59')
+    await page.getByRole('button', { name: 'Lou Brennan' }).click()
+    await expect(page.getByRole('dialog', { name: 'Lou Brennan' })).toContainText(
+      'Fri, Oct 2, end of day PDT',
+    )
+  })
+})
+
 test.describe('replies logged by hand', () => {
   test('a question and her answer in the same minute leave nothing waiting', async ({ page }) => {
     const pia = person('Pia Laurent', { due: ['2026-10-09', '17:00', LA] })

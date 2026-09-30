@@ -1,4 +1,4 @@
-import { formatDateTime, relative } from '../../core/deadline'
+import { formatDeadline, relative } from '../../core/deadline'
 import { shortUrl } from '../../core/links'
 import { SOURCE_LABELS } from '../../core/types'
 import { useIsWide } from '../lib/media'
@@ -23,7 +23,7 @@ function Deadline({ row, now, zone }: { row: Row; now: number; zone: string }) {
   if (!d) return <span className="muted">None</span>
   return (
     <span className="stack">
-      <span className="num">{formatDateTime(d.at, zone)}</span>
+      <span className="num">{formatDeadline(d, zone)}</span>
       <span className="num muted">{relative(d.at, now)}</span>
     </span>
   )
