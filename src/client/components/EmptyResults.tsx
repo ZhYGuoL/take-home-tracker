@@ -43,9 +43,9 @@ export function EmptyResults({ rows, filters, zone, onChange }: Props) {
     })
   if (filters.date) hatches.push({ label: 'Any date', next: { ...filters, date: null } })
   if (filters.q.trim())
-    hatches.push({ label: `Drop the search "${filters.q.trim()}"`, next: { ...filters, q: '' } })
+    hatches.push({ label: `Any text, not "${filters.q.trim()}"`, next: { ...filters, q: '' } })
   if (filters.view === 'needs')
-    hatches.push({ label: 'All candidates', next: { ...filters, view: 'all' } })
+    hatches.push({ label: 'Any view, not Needs you', next: { ...filters, view: 'all' } })
   if (activeCount(filters) > 1 || (activeCount(filters) === 1 && filters.view === 'needs'))
     hatches.push({ label: 'Clear every filter', next: { ...NO_FILTERS, view: 'all' } })
 

@@ -189,3 +189,11 @@ test.describe('a viewer in New York', () => {
     await expect.poll(() => shown(page)).toEqual(['Eli'])
   })
 })
+
+test('with nothing needing her, the way back names the view it loosens', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('Name, role, email, handle').fill('fay')
+  await expect(page.getByText('No candidates match')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Any view, not Needs you/ })).toContainText('1')
+  await expect(page.getByRole('button', { name: /^Any text, not "fay"/ })).toContainText('3')
+})
