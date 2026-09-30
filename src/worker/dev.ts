@@ -1,14 +1,41 @@
+import {
+  FAKE_CLIENT_ID,
+  FAKE_CLIENT_SECRET,
+  FAKE_GOOGLE_URL,
+  FAKE_SESSION_SECRET,
+} from '../shared/fake-google'
 import { createApp } from './app'
+import { GOOGLE } from './auth'
 import { DEV_ENTRY_MARKER } from './dev-marker'
 import type { Env } from './env'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 
+// Local development and tests only (D5). With GOOGLE_CLIENT_ID in .dev.vars it signs in with
+// real Google. Without it, it uses the local fake at test/fake-google/server.ts.
 // Workers treat every named export of the entry as a handler, so this file exports only the default.
-// Until sign-in exists (M5), local development acts as one local user.
 const app = createApp({
   fetch: (input, init) => fetch(input, init),
-  currentUser: async () => ({ sub: 'local', email: 'local@example.com', name: 'Local' }),
+  auth: (env) =>
+    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          sessionSecret: env.SESSION_SECRET ?? FAKE_SESSION_SECRET,
+          endpoints: GOOGLE,
+        }
+      : {
+          clientId: FAKE_CLIENT_ID,
+          clientSecret: FAKE_CLIENT_SECRET,
+          sessionSecret: FAKE_SESSION_SECRET,
+          endpoints: {
+            auth: `${FAKE_GOOGLE_URL}/o/oauth2/v2/auth`,
+            token: `${FAKE_GOOGLE_URL}/token`,
+            revoke: `${FAKE_GOOGLE_URL}/revoke`,
+            sheets: FAKE_GOOGLE_URL,
+            drive: FAKE_GOOGLE_URL,
+          },
+        },
 })
 
 export default {

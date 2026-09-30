@@ -7,7 +7,13 @@ const root = resolve(import.meta.dirname, '..')
 const bundle = readFileSync(resolve(root, 'dist/take_home_tracker/index.js'), 'utf8')
 const problems: string[] = []
 
-for (const marker of ['take-home-tracker-dev-entry', 'fake-google', 'FAKE_GOOGLE']) {
+for (const marker of [
+  'take-home-tracker-dev-entry',
+  'fake-google',
+  'FAKE_GOOGLE',
+  'fake-client-id',
+  'dev-only-session-secret',
+]) {
   if (bundle.includes(marker)) problems.push(`production Worker bundle contains "${marker}"`)
 }
 

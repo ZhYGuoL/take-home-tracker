@@ -1,6 +1,7 @@
+import { Hono } from 'hono'
 import { describe, expect, it, vi } from 'vitest'
-import { createApp } from './app'
 import type { Env, User } from './env'
+import { extractRoute, modelEnabled } from './extract'
 
 const user: User = { sub: 'u1', email: 'rae@example.com', name: 'Rae Lin' }
 const env: Env = {
@@ -30,10 +31,13 @@ function app(opts: { who?: User | null; model?: () => Promise<Response> } = {}) 
           JSON.stringify({ choices: [{ message: { content: JSON.stringify(reading) } }] }),
         )),
   )
-  const a = createApp({
+  const deps = {
     fetch: model as unknown as typeof fetch,
     currentUser: async () => opts.who ?? null,
-  })
+  }
+  const a = new Hono<{ Bindings: Env }>()
+  a.post('/api/extract', (c) => extractRoute(c, deps))
+  a.get('/api/model', async (c) => c.json({ enabled: await modelEnabled(c, deps) }))
   return { a, model }
 }
 
