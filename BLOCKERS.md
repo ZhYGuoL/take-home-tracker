@@ -100,6 +100,20 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
 8. Optional, only after B2: set the three model secrets in B2, step 6.
    The secrets take effect at once, with no new deploy.
 
+## B6. Check F10 on a real copy (after B3 and B4)
+
+**What.** F10 in `features.json` says "A new person can get their own working copy by following the README."
+It stays `false`, because the run cannot sign in to real Google or deploy.
+Everything the run can check is checked: a fresh clone installs and runs with `pnpm install` and `pnpm dev`, and `pnpm verify` passes.
+
+**Why it matters.** Only a real copy shows that the README steps work end to end.
+
+**Steps.**
+1. After B4, follow the README section "Start using it" with a second Google account, in a private window.
+2. Check that the second account sees an empty list, and that its own "Take-home tracker" Sheet appears in its Drive.
+3. If you want, follow "Run your own copy" too, with a new Cloudflare account and Google project.
+4. If the steps work, set F10 to `"passes": true` in `features.json`.
+
 ## B5. A public GitHub repo (after B1)
 
 **What.** The repo has no remote, and nothing is pushed. The run may not create either.
