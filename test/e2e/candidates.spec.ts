@@ -117,3 +117,19 @@ test('opening a second candidate from the list needs one close, not two', async 
   await page.getByRole('button', { name: 'Close' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
+
+test('a note survives closing the panel with Escape or the back gesture', async ({ page }) => {
+  const detail = await addCandidate(page, { name: 'Lena Fischer' })
+  await detail.getByLabel('Notes').fill('Strong on infra, ask about queues')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Lena Fischer' }).click()
+  await expect(page.getByLabel('Notes')).toHaveValue('Strong on infra, ask about queues')
+
+  await page.getByLabel('Notes').fill('Second thought')
+  await page.goBack()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.reload()
+  await page.getByRole('button', { name: 'Lena Fischer' }).click()
+  await expect(page.getByLabel('Notes')).toHaveValue('Second thought')
+})

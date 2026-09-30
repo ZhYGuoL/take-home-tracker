@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { formatDateTime, instantIn, localParts, relative, zoneName } from '../../core/deadline'
 import { type CandidateDraft, candidateFromDraft, draftFromCandidate } from '../../core/draft'
 import { normalizeUrl, shortUrl } from '../../core/links'
@@ -317,19 +317,37 @@ function LinkFields({
   )
 }
 
+/** Saves while she types, and once more when the panel closes, so no close path loses a note. */
 function Notes({ value, onSave }: { value: string; onSave: (v: string) => void }) {
   const [text, setText] = useState(value)
+  const saved = useRef(value)
+  const latest = useRef({ text, onSave })
+  latest.current = { text, onSave }
+
+  useEffect(() => {
+    if (text === saved.current) return
+    const t = window.setTimeout(() => {
+      saved.current = text
+      latest.current.onSave(text)
+    }, 500)
+    return () => window.clearTimeout(t)
+  }, [text])
+
+  useEffect(
+    () => () => {
+      const { text: last, onSave: save } = latest.current
+      if (last !== saved.current) {
+        saved.current = last
+        save(last)
+      }
+    },
+    [],
+  )
+
   return (
     <label className="field">
       <span className="field-label">Notes</span>
-      <textarea
-        rows={3}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          if (text !== value) onSave(text)
-        }}
-      />
+      <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
     </label>
   )
 }
