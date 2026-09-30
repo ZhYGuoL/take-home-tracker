@@ -352,11 +352,40 @@ function Notes({ value, onSave }: { value: string; onSave: (v: string) => void }
   )
 }
 
+/** Removes one timeline entry, such as a wrong link. The second click confirms. */
+function RemoveEntry({ entry }: { entry: Entry }) {
+  const repo = useRepo()
+  const [asking, setAsking] = useState(false)
+  if (!asking) {
+    return (
+      <button type="button" className="text-button" onClick={() => setAsking(true)}>
+        Remove
+      </button>
+    )
+  }
+  return (
+    <span className="timeline-confirm">
+      <button
+        type="button"
+        className="text-button strong"
+        onClick={() => void repo.deleteEntry(entry)}
+      >
+        Confirm remove
+      </button>
+      <button type="button" className="text-button" onClick={() => setAsking(false)}>
+        Keep
+      </button>
+    </span>
+  )
+}
+
 interface Item {
   id: string
   at: string
   label: string
   body?: ReactNode
+  /** The entry behind the item. The "Added" and "Take-home sent" items have none. */
+  entry?: Entry
 }
 
 function entryItem(e: Entry, onOpenSubmission: () => void): Item {
@@ -409,7 +438,7 @@ function Timeline({
   const c = row.candidate
   const items: Item[] = entries
     .filter((e) => e.candidateId === c.id)
-    .map((e) => entryItem(e, () => onOpenSubmission(row)))
+    .map((e) => ({ ...entryItem(e, () => onOpenSubmission(row)), entry: e }))
   items.push({ id: 'added', at: c.createdAt, label: 'Added' })
   if (c.sentAt) items.push({ id: 'sent', at: c.sentAt, label: 'Take-home sent' })
   items.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || (a.id < b.id ? 1 : -1))
@@ -419,7 +448,10 @@ function Timeline({
       <ol>
         {items.map((item) => (
           <li key={item.id}>
-            <span className="num muted timeline-time">{formatDateTime(item.at, zone)}</span>
+            <span className="timeline-head">
+              <span className="num muted timeline-time">{formatDateTime(item.at, zone)}</span>
+              {item.entry && <RemoveEntry entry={item.entry} />}
+            </span>
             <span className="timeline-label">{item.label}</span>
             {item.body}
           </li>

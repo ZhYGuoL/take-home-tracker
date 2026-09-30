@@ -638,6 +638,41 @@
   border-bottom: none;
 }
 
+.timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline-confirm {
+  display: flex;
+  gap: 12px;
+}
+
+.text-button {
+  all: unset;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-muted);
+  border-radius: 4px;
+}
+
+.text-button.strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  .text-button:hover {
+    color: var(--ink);
+  }
+}
+
+.text-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
 .timeline-label {
   font-weight: 500;
 }

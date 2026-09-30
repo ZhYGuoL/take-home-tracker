@@ -146,3 +146,17 @@ test('after a preset, changing the deadline zone keeps the same instant', async 
   await expect(readout).toHaveText('Sat, Oct 3, 9:00 AM PDT')
   await expect(dialog.getByLabel('Deadline', { exact: true })).toHaveValue('2026-10-03')
 })
+
+test('a wrong link can be removed from the timeline, and the stage follows', async ({ page }) => {
+  const detail = await addCandidate(page, { name: 'Omar Haddad' })
+  await detail.getByRole('button', { name: 'Add link' }).click()
+  await detail.getByLabel('Link', { exact: true }).fill('wrong-person.example.com')
+  await detail.getByRole('button', { name: 'Add link' }).last().click()
+  await expect(stageRadio(page, 'Submitted')).toBeChecked()
+
+  const item = detail.getByRole('listitem').filter({ hasText: 'wrong-person.example.com' })
+  await item.getByRole('button', { name: 'Remove' }).click()
+  await item.getByRole('button', { name: 'Confirm remove' }).click()
+  await expect(detail.getByText('wrong-person.example.com')).toHaveCount(0)
+  await expect(stageRadio(page, 'Sent')).toBeChecked()
+})
