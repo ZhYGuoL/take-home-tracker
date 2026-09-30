@@ -13,11 +13,15 @@ The Worker stores nothing.
 **Reason.**
 - The data belongs to the recruiter, and this puts it in an account she already controls.
   She can open, export, or delete it without this app.
-  A database in his account would hold data about the other candidates.
-  With this design, he cannot see any of it.
+- The operator of the instance does not store candidate data.
+  The operator still runs the code, the Google OAuth client, and the cookie key.
+  So a user still has to trust the operator's deploy of this open-source code, as with any hosted app.
 - Any recruiter gets a separate copy when they sign in with Google.
   Their data goes to their own Drive.
   Nobody has to deploy anything.
+- A recruiter who does not want to trust an operator can run a private instance.
+  They fork the repo, deploy it to their own Cloudflare free account, and make their own Google OAuth client.
+  The README has the steps.
 - Cost is $0.
   The Workers Free plan needs no credit card.
   Over its limit (100,000 requests a day), requests fail.
@@ -27,10 +31,13 @@ The Worker stores nothing.
   Vercel Hobby does have one, so it is not an option for the recruiter's instance.
 - v2 needs Google Calendar.
   The same Google sign-in can ask for that later.
+  Calendar read scopes are sensitive, so v2 needs Google's app verification.
+  Until then, users see an "unverified app" screen, and Google caps the number of users.
+  This is the same cost that counts against Apps Script below, but here only v2 pays it.
 
-**Rejected: a server database (Cloudflare D1, Supabase, or Neon) in Zhiyuan's account.**
+**Rejected: a server database (Cloudflare D1, Supabase, or Neon) in the operator's account.**
 It is simpler to build, because it has SQL and transactions.
-But the data would sit in Zhiyuan's account, which is the conflict above.
+But all recruiters' candidate data would sit in the operator's account.
 Also, a second recruiter would need their own deploy and their own Google Cloud setup to get a separate copy.
 
 **Rejected: Google Apps Script bound to a Sheet.**
