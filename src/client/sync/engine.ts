@@ -152,7 +152,7 @@ export class SheetSync implements Persistence {
       const deleted = new Set<string>()
       while (pending.length > 0) {
         const sending = pending
-        await this.api.append(sheet.id, sending.map(toRow))
+        await this.api.append(sheet, sending.map(toRow))
         if (this.pulls > 0) this.sentDuringPull.push(...sending)
         for (const r of sending) if (r.deleted && r.type === 'candidate') deleted.add(r.id)
         // Only what was sent leaves the queue. A save made meanwhile stays, and goes next.
@@ -166,7 +166,7 @@ export class SheetSync implements Persistence {
         })
       }
       if (deleted.size > 0) {
-        const rows = (await this.api.readRows(sheet.id)).map(fromRow)
+        const rows = (await this.api.readRows(sheet)).map(fromRow)
         await this.purge(sheet, rows, (t) => deleted.has(t.id) || stale(t))
       }
       this.setStatus('synced')
@@ -198,10 +198,10 @@ export class SheetSync implements Persistence {
       const sheet = await this.spreadsheet()
       await this.push()
       const mark = this.sentDuringPull.length
-      let rows = (await this.api.readRows(sheet.id)).map(fromRow)
+      let rows = (await this.api.readRows(sheet)).map(fromRow)
       // A delete that its device did not finish purging, for example because the tab closed.
       if (await this.purge(sheet, rows, stale)) {
-        rows = (await this.api.readRows(sheet.id)).map(fromRow)
+        rows = (await this.api.readRows(sheet)).map(fromRow)
       }
       const remote = mergeRecords(
         new Map(),
@@ -227,7 +227,7 @@ export class SheetSync implements Persistence {
       this.viewTimer = null
       try {
         const sheet = await this.spreadsheet()
-        await this.api.writeView(sheet.id, this.view(await this.cache.records()))
+        await this.api.writeView(sheet, this.view(await this.cache.records()))
       } catch {
         // The readable tab is a convenience. The next change writes it again.
       }

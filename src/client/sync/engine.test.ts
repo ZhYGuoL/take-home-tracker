@@ -16,12 +16,12 @@ function memorySheet() {
     fail,
     views: [] as string[][][],
     async findOrCreate(): Promise<Spreadsheet> {
-      return { id: 'sheet-1', recordsTab: 0 }
+      return { id: 'sheet-1', records: { sheetId: 0, title: 'records' }, view: null }
     },
     async readRows() {
       return rows.slice(1).map((r) => [...r])
     },
-    async append(_: string, add: string[][]) {
+    async append(_: Spreadsheet, add: string[][]) {
       if (fail.next > 0) {
         fail.next--
         throw new Error('google 503')
@@ -31,7 +31,7 @@ function memorySheet() {
     async deleteRows(_: Spreadsheet, indexes: number[]) {
       for (const i of [...indexes].sort((a, b) => b - a)) rows.splice(i, 1)
     },
-    async writeView(_: string, v: string[][]) {
+    async writeView(_: Spreadsheet, v: string[][]) {
       api.views.push(v)
     },
   }

@@ -37,7 +37,11 @@ test('when Google cannot be reached, she sees Not synced, and Retry catches up',
   }>
   // The next write to her Sheet fails once, as when the phone is offline.
   await page.request.post(`${FAKE_GOOGLE_URL}/__fail`, {
-    data: { prefix: `/v4/spreadsheets/${sheets[0]?.id}/values/records`, status: 503, times: 1 },
+    data: {
+      prefix: `/v4/spreadsheets/${sheets[0]?.id}/values/'records'!A1`,
+      status: 503,
+      times: 1,
+    },
   })
   await addCandidate(page, { name: 'Offline Olga' })
   await page.getByRole('button', { name: 'Close' }).click()
@@ -63,6 +67,26 @@ test('notes that grow past one Sheets cell still reach her Sheet', async ({ page
         (await records(page)).filter((r) => r[4]?.includes('Long Notes Lou')).at(-1)?.length,
     )
     .toBeGreaterThanOrEqual(7)
+  await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
+})
+
+test('after she renames the records tab by hand, saves still reach it', async ({ page }) => {
+  await seed(page, [person('Tab Renamer')])
+  await page.request.post(`${FAKE_GOOGLE_URL}/__rename-tab`, {
+    data: { sub: 'fake-avery', from: 'records', to: 'Data' },
+  })
+  await page.reload()
+  await addCandidate(page, { name: 'After Rename' })
+  await expect
+    .poll(async () => {
+      const sheets = (await (
+        await page.request.get(`${FAKE_GOOGLE_URL}/__sheets`)
+      ).json()) as Array<{
+        tabs: Record<string, string[][]>
+      }>
+      return JSON.stringify(sheets[0]?.tabs.Data)
+    })
+    .toContain('After Rename')
   await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
 })
 

@@ -82,6 +82,9 @@ The spreadsheet has two tabs.
 - `candidates` is a readable view with one row per candidate and plain columns.
   The app rewrites it from the store after each sync.
   Nothing reads it back, so an edit there has no effect, and a lost rewrite only makes it stale until the next one.
+- The app finds each tab by its numeric id, which stays the same when she renames a tab.
+- Two devices can open the app for the first time at once, and each make a file.
+  Each device then keeps the oldest file and puts the file it made in the bin, so their saves meet in one Sheet.
 
 On each sync, the `records` tab is the truth.
 Local state is the `records` tab plus the saves on this device that did not upload yet.

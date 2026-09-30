@@ -26,7 +26,10 @@ interface Sheet {
   title: string
   appProperties: Record<string, string>
   tabs: Map<string, string[][]>
+  /** Each tab's numeric id, which stays the same when the tab is renamed. */
+  ids: Map<string, number>
   createdTime: string
+  trashed?: boolean
 }
 
 const state = {
@@ -101,9 +104,13 @@ function issue(person: Person, withRefresh: boolean, drive = true) {
   return out
 }
 
-/** "records!A2:Z" or "records" to a tab name and a first row index (0-based). */
+/** "'records'!A2:Z" or "records" to a tab name and a first row index (0-based). */
 function parseRange(range: string): { tab: string; startRow: number } {
-  const [tab = '', cells] = decodeURIComponent(range).split('!')
+  const text = decodeURIComponent(range)
+  const at = text.lastIndexOf('!')
+  const raw = at < 0 ? text : text.slice(0, at)
+  const cells = at < 0 ? '' : text.slice(at + 1)
+  const tab = raw.startsWith("'") ? raw.slice(1, -1).replaceAll("''", "'") : raw
   const m = cells ? /^[A-Z]+(\d+)/.exec(cells) : null
   return { tab, startRow: m ? Number(m[1]) - 1 : 0 }
 }
@@ -150,6 +157,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       .filter(
         (x) =>
           x.owner === body.sub &&
+          !x.trashed &&
           (x.appProperties.takeHomeTracker === 'records-v1' || x.title === 'Take-home tracker'),
       )
       .sort((a, b) => a.createdTime.localeCompare(b.createdTime))[0]
@@ -163,6 +171,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         tabs: new Map([
           ['records', []],
           ['candidates', []],
+        ]),
+        ids: new Map([
+          ['records', 0],
+          ['candidates', 1],
         ]),
         createdTime: new Date().toISOString(),
       }
@@ -192,16 +204,30 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     return send(res, 200, { ok: true }, origin)
   }
+  // She renamed a tab by hand in Google Sheets.
+  if (path === '/__rename-tab' && req.method === 'POST') {
+    const body = JSON.parse(await readBody(req)) as { sub: string; from: string; to: string }
+    for (const sheet of state.sheets.values()) {
+      if (sheet.owner !== body.sub || !sheet.tabs.has(body.from)) continue
+      const rename = <T>(m: Map<string, T>) =>
+        new Map([...m].map(([k, v]): [string, T] => [k === body.from ? body.to : k, v]))
+      sheet.tabs = rename(sheet.tabs)
+      sheet.ids = rename(sheet.ids)
+    }
+    return send(res, 200, { ok: true }, origin)
+  }
   if (path === '/__sheets' && req.method === 'GET') {
     return send(
       res,
       200,
-      [...state.sheets.values()].map((s) => ({
-        id: s.id,
-        owner: s.owner,
-        title: s.title,
-        tabs: Object.fromEntries(s.tabs),
-      })),
+      [...state.sheets.values()]
+        .filter((s) => !s.trashed)
+        .map((s) => ({
+          id: s.id,
+          owner: s.owner,
+          title: s.title,
+          tabs: Object.fromEntries(s.tabs),
+        })),
       origin,
     )
   }
@@ -273,7 +299,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     const want = /appProperties has \{ key='([^']+)' and value='([^']+)' \}/.exec(q)
     const named = /name = '([^']+)'/.exec(q)
     const files = [...state.sheets.values()]
-      .filter((s) => s.owner === person.sub)
+      .filter((s) => s.owner === person.sub && !s.trashed)
       .filter(
         (s) =>
           (!want && !named) ||
@@ -293,8 +319,12 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (driveFile && req.method === 'PATCH') {
     const found = sheetFor(req, driveFile[1] ?? '')
     if (typeof found === 'number') return send(res, found, { error: { code: found } }, origin)
-    const body = JSON.parse(await readBody(req)) as { appProperties?: Record<string, string> }
+    const body = JSON.parse(await readBody(req)) as {
+      appProperties?: Record<string, string>
+      trashed?: boolean
+    }
     Object.assign(found.sheet.appProperties, body.appProperties ?? {})
+    if (body.trashed) found.sheet.trashed = true
     return send(res, 200, { id: found.sheet.id }, origin)
   }
 
@@ -305,7 +335,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     const body = JSON.parse(await readBody(req)) as {
       properties?: { title?: string }
       sheets?: Array<{
-        properties?: { title?: string }
+        properties?: { title?: string; sheetId?: number }
         data?: Array<{
           rowData?: Array<{ values?: Array<{ userEnteredValue?: { stringValue?: string } }> }>
         }>
@@ -313,11 +343,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     const id = `sheet-${++state.seq}-${randomBytes(4).toString('hex')}`
     const tabs = new Map<string, string[][]>()
-    for (const s of body.sheets ?? [{ properties: { title: 'Sheet1' } }]) {
+    const ids = new Map<string, number>()
+    for (const [i, s] of (body.sheets ?? [{ properties: { title: 'Sheet1' } }]).entries()) {
       const rows = (s.data?.[0]?.rowData ?? []).map((r) =>
         (r.values ?? []).map((v) => v.userEnteredValue?.stringValue ?? ''),
       )
-      tabs.set(s.properties?.title ?? 'Sheet1', rows)
+      const title = s.properties?.title ?? 'Sheet1'
+      tabs.set(title, rows)
+      ids.set(title, s.properties?.sheetId ?? 1000 + i)
     }
     state.sheets.set(id, {
       id,
@@ -325,6 +358,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       title: body.properties?.title ?? 'Untitled',
       appProperties: {},
       tabs,
+      ids,
       createdTime: new Date().toISOString(),
     })
     return send(res, 200, { spreadsheetId: id }, origin)
@@ -378,11 +412,12 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         }
       }>
     }
-    const tabs = [...found.sheet.tabs.values()]
+    const titleOf = (sheetId: number) =>
+      [...found.sheet.ids].find(([, id]) => id === sheetId)?.[0] ?? ''
     for (const r of body.requests) {
       const d = r.deleteDimension
       if (d?.range.dimension !== 'ROWS') continue
-      const rows = tabs[d.range.sheetId ?? 0]
+      const rows = found.sheet.tabs.get(titleOf(d.range.sheetId ?? 0))
       rows?.splice(d.range.startIndex, d.range.endIndex - d.range.startIndex)
     }
     return send(res, 200, { replies: [] }, origin)
@@ -396,8 +431,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       200,
       {
         spreadsheetId: found.sheet.id,
-        sheets: [...found.sheet.tabs.keys()].map((title, sheetId) => ({
-          properties: { sheetId, title },
+        sheets: [...found.sheet.tabs.keys()].map((title) => ({
+          properties: { sheetId: found.sheet.ids.get(title), title },
         })),
       },
       origin,
