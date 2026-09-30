@@ -23,6 +23,7 @@ export interface NewCandidate {
 export async function addCandidate(page: Page, c: NewCandidate) {
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+  await dialog.getByRole('radio', { name: 'By hand' }).click()
   await dialog.getByLabel('Name', { exact: true }).fill(c.name)
   if (c.role) await dialog.getByLabel('Role', { exact: true }).fill(c.role)
   if (c.contact) await dialog.getByLabel('Contact', { exact: true }).fill(c.contact)

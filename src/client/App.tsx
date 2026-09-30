@@ -1,10 +1,6 @@
 import { useMemo } from 'react'
-import {
-  type CandidateDraft,
-  candidateFromDraft,
-  emptyDraft,
-  submissionFromDraft,
-} from '../core/draft'
+import { type CandidateDraft, candidateFromDraft, submissionFromDraft } from '../core/draft'
+import { extractWithRules } from '../core/extract/rules'
 import {
   applyFilters,
   countOptions,
@@ -14,16 +10,19 @@ import {
 } from '../core/filters'
 import { sortRows } from '../core/sort'
 import type { Entry } from '../core/types'
-import { CandidateForm } from './components/CandidateForm'
+import { AddDialog } from './components/AddDialog'
 import { CandidateTable } from './components/CandidateTable'
 import { DetailPanel } from './components/DetailPanel'
 import { EmptyResults } from './components/EmptyResults'
 import { FilterBar } from './components/FilterBar'
-import { Sheet, SheetHeader } from './components/Sheet'
+import { Sheet } from './components/Sheet'
 import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
 import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
+
+const extract = async (paste: string, ctx: Parameters<typeof extractWithRules>[1]) =>
+  extractWithRules(paste, ctx)
 
 export function App() {
   const repo = useRepo()
@@ -152,18 +151,16 @@ export function App() {
         </Sheet>
       )}
       {adding && (
-        <Sheet label="Add candidate" variant="dialog" onClose={() => close('new')}>
-          <SheetHeader title="Add candidate" onClose={() => close('new')} />
-          <CandidateForm
-            mode="add"
-            initial={emptyDraft(zone, now)}
-            zone={zone}
-            roles={roles}
-            submitLabel="Add"
-            onSubmit={add}
-            onCancel={() => close('new')}
-          />
-        </Sheet>
+        <AddDialog
+          zone={zone}
+          roles={roles}
+          now={now}
+          extract={extract}
+          self={undefined}
+          onAddByHand={add}
+          onSaved={(id) => navigate({ new: null, c: id }, 'replace')}
+          onClose={() => close('new')}
+        />
       )}
     </div>
   )

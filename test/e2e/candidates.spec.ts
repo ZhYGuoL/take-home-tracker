@@ -78,6 +78,7 @@ test('editing a candidate changes the list', async ({ page }) => {
 test('a name is required', async ({ page }) => {
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+  await dialog.getByRole('radio', { name: 'By hand' }).click()
   await dialog.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(dialog.getByText('Required')).toBeVisible()
 })
@@ -138,6 +139,7 @@ test('a note survives closing the panel with Escape or the back gesture', async 
 test('after a preset, changing the deadline zone keeps the same instant', async ({ page }) => {
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+  await dialog.getByRole('radio', { name: 'By hand' }).click()
   await dialog.getByLabel('Sent', { exact: true }).fill('2026-10-01')
   await dialog.getByLabel('Time', { exact: true }).first().fill('09:00')
   await dialog.getByRole('button', { name: '48h' }).click()
