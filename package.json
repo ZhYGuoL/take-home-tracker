@@ -22,10 +22,8 @@
     "deploy": "vite build && node scripts/check-prod-bundle.ts && wrangler deploy --config dist/take_home_tracker/wrangler.json"
   },
   "dependencies": {
-    "@date-fns/tz": "^1.5.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "date-fns": "^4.4.0",
     "hono": "^4.13.11",
     "idb-keyval": "^6.3.0",
     "react": "^19.3.0",

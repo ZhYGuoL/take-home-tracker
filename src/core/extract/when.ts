@@ -1,6 +1,12 @@
-import { TZDate } from '@date-fns/tz'
-import { deadlineAfterDays, deadlineAfterHours, deadlineAt, localParts } from '../deadline'
+import {
+  deadlineAfterDays,
+  deadlineAfterHours,
+  deadlineAt,
+  instantIn,
+  localParts,
+} from '../deadline'
 import type { Deadline } from '../types'
+import { addDays, weekdayOf } from '../zone'
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -97,24 +103,17 @@ export function parseClock(text: string, now: string, zone: string): string | nu
   const today = localParts(now, at).date
   const t = instant(today, time, at)
   if (Date.parse(t) <= Date.parse(now)) return t
-  const d = new TZDate(Date.parse(now), at)
-  d.setDate(d.getDate() - 1)
-  return instant(localParts(new Date(d.getTime()).toISOString(), at).date, time, at)
+  return instant(addDays(today, -1), time, at)
 }
 
-function instant(date: string, time: string, zone: string): string {
-  const [y, mo, d] = date.split('-').map(Number) as [number, number, number]
-  const [h, mi] = time.split(':').map(Number) as [number, number]
-  return new Date(new TZDate(y, mo - 1, d, h, mi, 0, 0, zone).getTime()).toISOString()
-}
+const instant = instantIn
 
 /** The next date that falls on `weekday`, after today in `zone`. Today counts only if `today`. */
 function nextWeekday(now: string, zone: string, weekday: number, includeToday: boolean): string {
-  const d = new TZDate(Date.parse(now), zone)
-  let add = (weekday - d.getDay() + 7) % 7
+  const today = localParts(now, zone).date
+  let add = (weekday - weekdayOf(today) + 7) % 7
   if (add === 0 && !includeToday) add = 7
-  d.setDate(d.getDate() + add)
-  return localParts(new Date(d.getTime()).toISOString(), zone).date
+  return addDays(today, add)
 }
 
 /**
@@ -173,9 +172,7 @@ export function parseDeadline(text: string, now: string, zone: string): Deadline
   }
 
   if (/\b(?:by|due|until)\s+(?:eod\s+)?tomorrow\b/.test(t)) {
-    const d = new TZDate(Date.parse(now), zone)
-    d.setDate(d.getDate() + 1)
-    return deadlineAt(localParts(new Date(d.getTime()).toISOString(), zone).date, null, zone)
+    return deadlineAt(addDays(localParts(now, zone).date, 1), null, zone)
   }
   return null
 }

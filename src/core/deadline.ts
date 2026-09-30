@@ -1,5 +1,5 @@
-import { TZDate } from '@date-fns/tz'
 import type { Deadline } from './types'
+import { addDays, dateIn, instantOf, wallClock } from './zone'
 
 const HOUR = 3_600_000
 
@@ -28,15 +28,15 @@ function parseTime(time: string): [number, number] {
 export function instantIn(date: string, time: string, zone: string): string {
   const [y, mo, d] = parseDate(date)
   const [h, mi] = parseTime(time)
-  return new Date(new TZDate(y, mo - 1, d, h, mi, 0, 0, zone).getTime()).toISOString()
+  return new Date(instantOf(zone, y, mo, d, h, mi)).toISOString()
 }
 
 /** A deadline from a date, an optional time, and the zone it was agreed in (D8). */
 export function deadlineAt(date: string, time: string | null, zone: string): Deadline {
   if (time) return { at: instantIn(date, time, zone), zone, dateOnly: false }
   const [y, mo, d] = parseDate(date)
-  const end = new TZDate(y, mo - 1, d, 23, 59, 59, 999, zone)
-  return { at: new Date(end.getTime()).toISOString(), zone, dateOnly: true }
+  const end = instantOf(zone, y, mo, d, 23, 59, 59, 999)
+  return { at: new Date(end).toISOString(), zone, dateOnly: true }
 }
 
 /** "48 hours" is exactly 48 real hours after `from` (D8). */
@@ -46,19 +46,19 @@ export function deadlineAfterHours(from: string, hours: number, zone: string): D
 
 /** "2 days" is the same wall-clock time two calendar days later in `zone` (D8). */
 export function deadlineAfterDays(from: string, days: number, zone: string): Deadline {
-  const t = new TZDate(Date.parse(from), zone)
-  t.setDate(t.getDate() + days)
-  return { at: new Date(t.getTime()).toISOString(), zone, dateOnly: false }
+  const t = Date.parse(from)
+  const w = wallClock(t, zone)
+  const [y, mo, d] = parseDate(addDays(dateIn(t, zone), days))
+  const at = instantOf(zone, y, mo, d, w.hour, w.minute, w.second, t % 1000)
+  return { at: new Date(at).toISOString(), zone, dateOnly: false }
 }
 
 /** The wall-clock date and time of `iso` in `zone`, for form inputs. */
 export function localParts(iso: string, zone: string): { date: string; time: string } {
-  const t = new TZDate(Date.parse(iso), zone)
+  const t = Date.parse(iso)
+  const w = wallClock(t, zone)
   const pad = (n: number) => String(n).padStart(2, '0')
-  return {
-    date: `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`,
-    time: `${pad(t.getHours())}:${pad(t.getMinutes())}`,
-  }
+  return { date: dateIn(t, zone), time: `${pad(w.hour)}:${pad(w.minute)}` }
 }
 
 /** A short zone name such as "PDT" or "GMT+2" for `iso` in `zone`. */
