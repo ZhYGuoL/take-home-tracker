@@ -25,7 +25,7 @@ eval/results/*.local.json
 .vscode/
 .idea/
 *.log
-dist-*/
+dist-e2e/
 
 # the brief quotes private messages (D11)
 BRIEF.md

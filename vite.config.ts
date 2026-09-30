@@ -2,15 +2,16 @@ import { cloudflare } from '@cloudflare/vite-plugin'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// `vite build` with the default mode makes the production bundle.
-// Any other mode (dev server, e2e) runs the dev Worker entry.
+// The production Worker entry is the default. The dev entry, which can use the fake
+// Google server, is only for the dev server, preview, and the e2e build (D5).
 export default defineConfig(({ command, mode }) => {
-  const production = command === 'build' && mode === 'production'
+  const dev = command === 'serve' || mode === 'e2e'
+  if (!dev && mode !== 'production') throw new Error(`unknown build mode: ${mode}`)
   return {
     plugins: [
       react(),
-      cloudflare({ configPath: production ? './wrangler.jsonc' : './wrangler.dev.jsonc' }),
+      cloudflare({ configPath: dev ? './wrangler.dev.jsonc' : './wrangler.jsonc' }),
     ],
-    build: { outDir: production ? 'dist' : `dist-${mode}` },
+    build: { outDir: dev ? 'dist-e2e' : 'dist' },
   }
 })

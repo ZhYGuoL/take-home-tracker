@@ -17,8 +17,9 @@
     "test": "vitest run",
     "check": "biome check . && tsc -b && vitest run",
     "e2e": "playwright test",
-    "verify": "pnpm check && pnpm build && pnpm e2e",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "verify": "pnpm check && pnpm e2e && pnpm build && node scripts/check-prod-bundle.ts",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "deploy": "vite build && node scripts/check-prod-bundle.ts && wrangler deploy --config dist/take_home_tracker/wrangler.json"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
