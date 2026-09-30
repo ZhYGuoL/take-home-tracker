@@ -35,7 +35,8 @@ export interface AuthDeps {
   config: (env: Env) => AuthConfig | null
 }
 
-export const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file'
+const DRIVE_FILE = 'https://www.googleapis.com/auth/drive.file'
+export const SCOPES = `openid email profile ${DRIVE_FILE}`
 const SESSION = 'tht_session'
 const OAUTH = 'tht_oauth'
 const SESSION_DAYS = 180
@@ -156,6 +157,12 @@ export function authRoutes(app: Hono<{ Bindings: Env }>, deps: AuthDeps) {
       expires_in?: number
       refresh_token?: string
       id_token?: string
+      scope?: string
+    }
+    // Google lets her untick Drive on the consent screen. Without it, no save can work.
+    if (!tokens.scope?.split(' ').includes(DRIVE_FILE)) {
+      deleteCookie(c, OAUTH, { path: '/auth' })
+      return c.redirect('/?signin=drive', 302)
     }
     const claims = tokens.id_token ? idTokenClaims(tokens.id_token) : null
     const valid =

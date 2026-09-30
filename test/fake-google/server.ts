@@ -16,6 +16,8 @@ interface Code {
   person: Person
   challenge: string
   redirectUri: string
+  /** False when she unticked Drive on the consent screen. */
+  drive: boolean
 }
 
 interface Sheet {
@@ -73,14 +75,14 @@ function unsignedJwt(payload: Record<string, unknown>): string {
   return `${b64({ alg: 'none', typ: 'JWT' })}.${b64(payload)}.`
 }
 
-function issue(person: Person, withRefresh: boolean) {
+function issue(person: Person, withRefresh: boolean, drive = true) {
   const access = token('ya29.fake')
   state.access.set(access, { person, expires: Date.now() + 3600_000 })
   const out: Record<string, unknown> = {
     access_token: access,
     expires_in: 3599,
     token_type: 'Bearer',
-    scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
+    scope: `openid email profile${drive ? ' https://www.googleapis.com/auth/drive.file' : ''}`,
     id_token: unsignedJwt({
       iss: 'https://accounts.google.com',
       aud: FAKE_CLIENT_ID,
@@ -211,16 +213,22 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     const st = url.searchParams.get('state') ?? ''
     const challenge = url.searchParams.get('code_challenge') ?? ''
     if (url.searchParams.get('client_id') !== FAKE_CLIENT_ID) return send(res, 400, 'bad client')
-    const links = PEOPLE.map((p) => {
+    const back = (p: Person, drive: boolean) => {
       const code = token('code')
-      state.codes.set(code, { person: p, challenge, redirectUri: redirect })
-      const to = `${redirect}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(st)}`
-      return `<li><a href="${to}">${p.name}<br><small>${p.email}</small></a></li>`
-    })
+      state.codes.set(code, { person: p, challenge, redirectUri: redirect, drive })
+      return `${redirect}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(st)}`
+    }
+    const links = PEOPLE.map(
+      (p) => `<li><a href="${back(p, true)}">${p.name}<br><small>${p.email}</small></a></li>`,
+    )
+    // As if she unticked the Drive box on Google's consent screen.
+    const noDrive = PEOPLE.map(
+      (p) => `<li><a href="${back(p, false)}">Without Drive: ${p.email}</a></li>`,
+    )
     return send(
       res,
       200,
-      `<!doctype html><title>Choose an account</title><h1>Choose an account</h1><ul>${links.join('')}</ul>`,
+      `<!doctype html><title>Choose an account</title><h1>Choose an account</h1><ul>${links.join('')}</ul><ul>${noDrive.join('')}</ul>`,
     )
   }
   if (path === '/token' && req.method === 'POST') {
@@ -240,7 +248,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       if (expected !== code.challenge || form.get('redirect_uri') !== code.redirectUri) {
         return send(res, 400, { error: 'invalid_grant' })
       }
-      return send(res, 200, issue(code.person, true))
+      return send(res, 200, issue(code.person, true, code.drive))
     }
     if (form.get('grant_type') === 'refresh_token') {
       const person = state.refresh.get(form.get('refresh_token') ?? '')

@@ -21,8 +21,9 @@ async function boot() {
 
   // A signed-out visitor gets the sign-in screen and nothing else (F8).
   if (!session.signedIn) {
-    const failed = new URLSearchParams(window.location.search).get('signin') === 'failed'
-    root.render(<SignIn failed={failed} setUp={session.setUp} />)
+    const why = new URLSearchParams(window.location.search).get('signin')
+    const problem = why === 'failed' || why === 'drive' ? why : null
+    root.render(<SignIn problem={problem} setUp={session.setUp} />)
     return
   }
 

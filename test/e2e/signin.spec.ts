@@ -39,6 +39,19 @@ test.describe('signed out', () => {
   })
 })
 
+test.describe('Drive access', () => {
+  test('if she unticks Drive at Google, she is asked to continue again with it', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Continue with Google' }).click()
+    await page.getByRole('link', { name: 'Without Drive: blake@example.com' }).click()
+    await expect(page.getByRole('alert')).toContainText('needs Google Drive access')
+    expect((await page.request.get('/api/session')).status()).toBe(401)
+    await signInAs(page, 'Blake Rivera')
+  })
+})
+
 test.describe('signed in', () => {
   test('her candidates live in a Sheet in her own Drive', async ({ page }) => {
     await signInAs(page, 'Avery Stone')

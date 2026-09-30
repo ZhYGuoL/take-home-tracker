@@ -20,7 +20,9 @@ const cfg: AuthConfig = {
 const idToken = (claims: Record<string, unknown>) =>
   `x.${btoa(JSON.stringify(claims)).replace(/=+$/, '')}.y`
 
-function fakeGoogle(opts: { claims?: Record<string, unknown>; refreshStatus?: number } = {}) {
+function fakeGoogle(
+  opts: { claims?: Record<string, unknown>; refreshStatus?: number; scope?: string } = {},
+) {
   const calls: Array<{ url: string; form: URLSearchParams }> = []
   let challenge = ''
   const f = vi.fn(async (url: string, init?: RequestInit) => {
@@ -34,6 +36,7 @@ function fakeGoogle(opts: { claims?: Record<string, unknown>; refreshStatus?: nu
         access_token: 'at-1',
         refresh_token: 'rt-1',
         expires_in: 3600,
+        scope: opts.scope ?? 'openid https://www.googleapis.com/auth/drive.file email profile',
         id_token: idToken({
           iss: 'https://accounts.google.com',
           aud: 'client-1',
@@ -127,6 +130,13 @@ describe('sign-in', () => {
       const { back } = await signIn(fakeGoogle({ claims }))
       expect(back.headers.get('location')).toBe('/?signin=failed')
     }
+  })
+
+  it('sends her back to sign in when she did not give Drive access', async () => {
+    const g = fakeGoogle({ scope: 'openid email profile' })
+    const { back } = await signIn(g)
+    expect(back.headers.get('location')).toBe('/?signin=drive')
+    expect(back.headers.getSetCookie().some((c) => /^tht_session=[^;]+/.test(c))).toBe(false)
   })
 
   it('a signed-out visitor has no session and no user', async () => {

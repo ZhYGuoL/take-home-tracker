@@ -1,12 +1,21 @@
+/** Why the last sign-in did not finish, from the `signin` query. */
+export type SignInProblem = 'failed' | 'drive' | null
+
 /** What a signed-out visitor sees: nothing but the way in (F8). */
-export function SignIn({ failed, setUp }: { failed: boolean; setUp: boolean }) {
+export function SignIn({ problem, setUp }: { problem: SignInProblem; setUp: boolean }) {
   return (
     <div className="signin">
       <div className="panel signin-panel">
         <h1>Take-homes</h1>
-        {failed && (
+        {problem === 'failed' && (
           <p className="signin-note" role="alert">
             Sign-in did not finish. Try again.
+          </p>
+        )}
+        {problem === 'drive' && (
+          <p className="signin-note" role="alert">
+            The tracker needs Google Drive access to keep your list. Continue again, and leave the
+            Drive box ticked.
           </p>
         )}
         {setUp ? (
