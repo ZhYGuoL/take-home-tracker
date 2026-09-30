@@ -264,3 +264,23 @@ The app is light mode only, as the skill says.
 
 **Reason.** The UI standards are Zhiyuan's own rules.
 The skill is an extracted snapshot of another site.
+
+## D13. Model cost guard
+
+**Choice.** Three limits on model spend.
+- `/api/extract` requires a signed-in session.
+- It also requires the user's email to be in `MODEL_ALLOWED_EMAILS`.
+  If the list is empty, the model is off for everyone, and the rules proposal is used.
+  Other users of the same instance still get the full app without the model.
+- The OpenRouter key has a monthly credit limit, which the operator sets in OpenRouter.
+  That is the hard cap, because the Worker has no daily counter.
+
+A Workers rate-limit binding also caps each user at 20 model calls a minute.
+It stops a stuck client from a loop of calls.
+The binding only has 10 and 60 second windows, so it cannot be a daily cap.
+
+**Reason.** OpenRouter needs prepaid credits, which needs a card, so the operator pays for every paste.
+An allowlist keeps a shared instance from spending the operator's credits on strangers.
+
+**Rejected: a daily counter in Workers KV or a Durable Object.**
+It adds stored state to a Worker that has none, for a limit that the OpenRouter key already enforces.
