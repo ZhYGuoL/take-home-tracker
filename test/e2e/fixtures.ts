@@ -59,3 +59,15 @@ export function shownNames(page: Page) {
 export function rowOf(page: Page, name: string) {
   return page.locator('tbody tr, li.list-item').filter({ hasText: name })
 }
+
+/**
+ * Signs in through the fake Google chooser. Sign-out ends the whole grant, as at Google, so a
+ * test that signs out uses Blake or Casey. Avery Stone is the saved session other tests share.
+ */
+export async function signInAs(page: Page, name: 'Avery Stone' | 'Blake Rivera' | 'Casey Nguyen') {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Continue with Google' }).click()
+  await page.getByRole('link', { name: new RegExp(name) }).click()
+  await expect(page.getByRole('heading', { name: 'Take-homes' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveCount(0)
+}

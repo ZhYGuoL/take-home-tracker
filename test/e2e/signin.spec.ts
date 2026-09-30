@@ -1,19 +1,9 @@
 import type { Page } from '@playwright/test'
 import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
-import { expect, test } from './fixtures'
-
-const people = { avery: 'Avery Stone', blake: 'Blake Rivera' }
+import { expect, signInAs, test } from './fixtures'
 
 // These tests start signed out.
 test.use({ storageState: { cookies: [], origins: [] } })
-
-async function signInAs(page: Page, who: keyof typeof people) {
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Continue with Google' }).click()
-  await page.getByRole('link', { name: new RegExp(people[who]) }).click()
-  await expect(page.getByRole('heading', { name: 'Take-homes' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveCount(0)
-}
 
 async function addByHand(page: Page, name: string) {
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
@@ -51,7 +41,7 @@ test.describe('signed out', () => {
 
 test.describe('signed in', () => {
   test('her candidates live in a Sheet in her own Drive', async ({ page }) => {
-    await signInAs(page, 'avery')
+    await signInAs(page, 'Avery Stone')
     await addByHand(page, 'Rowan Okafor')
     await expect
       .poll(
@@ -65,29 +55,29 @@ test.describe('signed in', () => {
   })
 
   test('one user never sees another user on the same browser', async ({ page }) => {
-    await signInAs(page, 'avery')
-    await addByHand(page, 'Avery Candidate')
+    await signInAs(page, 'Casey Nguyen')
+    await addByHand(page, 'Casey Candidate')
     await page.getByRole('radio', { name: /All/ }).click()
-    await expect(page.getByRole('button', { name: 'Avery Candidate' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Casey Candidate' })).toBeVisible()
     await expect.poll(async () => (await sheets(page)).length).toBe(1)
     await signOut(page)
 
-    await signInAs(page, 'blake')
+    await signInAs(page, 'Blake Rivera')
     await expect(page.getByText('No candidates')).toBeVisible()
-    await expect(page.getByText('Avery Candidate')).toHaveCount(0)
+    await expect(page.getByText('Casey Candidate')).toHaveCount(0)
     await addByHand(page, 'Blake Candidate')
     await signOut(page)
 
-    await signInAs(page, 'avery')
+    await signInAs(page, 'Casey Nguyen')
     await page.getByRole('radio', { name: /All/ }).click()
-    await expect(page.getByRole('button', { name: 'Avery Candidate' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Casey Candidate' })).toBeVisible()
     await expect(page.getByText('Blake Candidate')).toHaveCount(0)
     const owners = (await sheets(page)).map((s) => s.owner).sort()
-    expect(owners).toEqual(['fake-avery', 'fake-blake'])
+    expect(owners).toEqual(['fake-blake', 'fake-casey'])
   })
 
   test('another device sees her changes after a reload', async ({ browser, page }) => {
-    await signInAs(page, 'avery')
+    await signInAs(page, 'Avery Stone')
     await addByHand(page, 'Priya Raman')
     await expect
       .poll(
@@ -96,7 +86,7 @@ test.describe('signed in', () => {
       )
       .toBe(2)
     const phone = await (await browser.newContext()).newPage()
-    await signInAs(phone, 'avery')
+    await signInAs(phone, 'Avery Stone')
     await phone.getByRole('radio', { name: /All/ }).click()
     await expect(phone.getByRole('button', { name: 'Priya Raman' })).toBeVisible()
     await phone.context().close()
@@ -110,7 +100,7 @@ test.describe('when Google stops taking her tokens', () => {
   test('a refused access token is replaced, and her saves keep reaching the Sheet', async ({
     page,
   }) => {
-    await signInAs(page, 'blake')
+    await signInAs(page, 'Blake Rivera')
     await page.request.post(`${FAKE_GOOGLE_URL}/__drop-access`, { data: { sub: 'fake-blake' } })
     await addByHand(page, 'Tess Okonkwo')
     await expect.poll(() => records(page)).toContain('Tess Okonkwo')
@@ -120,7 +110,7 @@ test.describe('when Google stops taking her tokens', () => {
   test('after she removes the app at Google, she goes to sign-in, and an unsent save survives', async ({
     page,
   }) => {
-    await signInAs(page, 'blake')
+    await signInAs(page, 'Blake Rivera')
     await expect.poll(async () => (await sheets(page)).length).toBe(1)
     // Google cannot be reached while she adds someone, so the save waits on this device.
     await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())
@@ -135,7 +125,7 @@ test.describe('when Google stops taking her tokens', () => {
     await page.unroute(`${FAKE_GOOGLE_URL}/**`)
     await page.getByRole('button', { name: 'Retry' }).click()
     await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
-    await signInAs(page, 'blake')
+    await signInAs(page, 'Blake Rivera')
     await expect.poll(() => records(page)).toContain('Uma Lindgren')
   })
 
@@ -143,9 +133,9 @@ test.describe('when Google stops taking her tokens', () => {
     browser,
     page,
   }) => {
-    await signInAs(page, 'blake')
+    await signInAs(page, 'Blake Rivera')
     const phone = await (await browser.newContext()).newPage()
-    await signInAs(phone, 'blake')
+    await signInAs(phone, 'Blake Rivera')
     await signOut(page)
     await phone.getByRole('button', { name: 'Add', exact: true }).first().click()
     const dialog = phone.getByRole('dialog', { name: 'Add candidate' })

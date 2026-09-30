@@ -7,6 +7,7 @@ import { FAKE_CLIENT_ID, FAKE_CLIENT_SECRET } from '../../src/shared/fake-google
 const PEOPLE = [
   { sub: 'fake-avery', email: 'avery@example.com', name: 'Avery Stone' },
   { sub: 'fake-blake', email: 'blake@example.com', name: 'Blake Rivera' },
+  { sub: 'fake-casey', email: 'casey@example.com', name: 'Casey Nguyen' },
 ]
 
 type Person = (typeof PEOPLE)[number]

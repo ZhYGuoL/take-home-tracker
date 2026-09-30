@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
-import { addCandidate, expect, test } from './fixtures'
+import { addCandidate, expect, signInAs, test } from './fixtures'
 import { person, seed, submitted } from './seed'
 
 async function records(page: Page): Promise<string[][]> {
@@ -59,27 +59,33 @@ test('deleting a candidate removes every row of theirs from her Sheet', async ({
   expect((await records(page)).map((r) => r[0])).toEqual(['id', keep.id])
 })
 
-test('signing out clears this browser, so the next person sees nothing of hers', async ({
-  page,
-}) => {
-  await seed(page, [person('Private Pat')])
-  await page.getByRole('radio', { name: /All/ }).click()
-  await expect(page.getByRole('button', { name: 'Private Pat' })).toBeVisible()
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
-  const left = await page.evaluate(
-    () =>
-      new Promise<number>((resolve) => {
-        const open = indexedDB.open('take-home-tracker')
-        open.onsuccess = () => {
-          const tx = open.result.transaction('records', 'readonly')
-          const req = tx.objectStore('records').getAllKeys()
-          req.onsuccess = () =>
-            resolve(req.result.filter((k) => String(k).includes('fake-avery')).length)
-        }
-      }),
-  )
-  expect(left).toBe(0)
+test.describe('signing out', () => {
+  // Sign-out ends the whole grant, so this test uses its own account, not the shared session.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('signing out clears this browser, so the next person sees nothing of hers', async ({
+    page,
+  }) => {
+    await signInAs(page, 'Casey Nguyen')
+    await seed(page, [person('Private Pat')], 'fake-casey')
+    await page.getByRole('radio', { name: /All/ }).click()
+    await expect(page.getByRole('button', { name: 'Private Pat' })).toBeVisible()
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+    const left = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          const open = indexedDB.open('take-home-tracker')
+          open.onsuccess = () => {
+            const tx = open.result.transaction('records', 'readonly')
+            const req = tx.objectStore('records').getAllKeys()
+            req.onsuccess = () =>
+              resolve(req.result.filter((k) => String(k).includes('fake-casey')).length)
+          }
+        }),
+    )
+    expect(left).toBe(0)
+  })
 })
 
 test('her Sheet gets a readable candidates tab', async ({ page }) => {
