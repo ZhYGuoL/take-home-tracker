@@ -341,3 +341,49 @@ This split uses each side for what it does well, and every exact value stays tes
 
 **Rejected: let the model return ISO timestamps.**
 It would have to know her zone, daylight saving, and "yesterday" relative to the paste, and a wrong answer looks right.
+
+## D17. Model choice
+
+**Measured.** The rules on the blind set (`pnpm eval --set blind`, 40 cases, D14):
+
+| Field | Rules |
+|---|---|
+| name | 87% (33/38) |
+| contacts | 95% (18/19) |
+| role | 100% (20/20) |
+| source | 91% (29/32) |
+| direction | 95% (38/40) |
+| message time | 87% (27/31) |
+| links | 95% (38/40) |
+| deadline | 93% (37/40) |
+| needs reply | 88% (35/40) |
+| match | 95% (38/40) |
+
+For comparison, the first rules scored 36% on name, 31% on source, and 23% on message time on a blind set.
+
+**Not measured yet.** The run had no `OPENROUTER_API_KEY` in `.env`, so no model ran (B2).
+`pnpm eval --set blind --jev` measures these, chosen for low cost and structured output support on OpenRouter:
+
+| Model | $ per 1M in / out | Estimated $ per paste |
+|---|---|---|
+| `openai/gpt-5.4-nano` | 0.20 / 1.25 | 0.0005 |
+| `google/gemini-3.1-flash-lite` | 0.25 / 1.50 | 0.0006 |
+| `deepseek/deepseek-v4-flash` | 0.14 / 0.28 | 0.0003 |
+| `anthropic/claude-haiku-4.5` | 1.00 / 5.00 | 0.0023 |
+| `jev-1.13` (direction, needs reply, match only) | 0.042 / free | under 0.0001 |
+
+The estimate assumes about 1,500 input tokens (instructions, a list of 30 known candidates, the paste) and 150 output tokens.
+At 20 pastes a day, every option costs under $0.05 a day.
+
+**Choice.** The rules are the reader until the numbers exist.
+The model stays off: the Worker needs both `OPENROUTER_API_KEY` and `MODEL_ID`, and `MODEL_ID` is unset.
+
+**Rule for turning it on.** Run `pnpm eval --set blind --jev`, then:
+1. Take the merged reading ("rules + model") of each chat model.
+2. Keep a model only if it is at least 5 points better than the rules on name, message time, or needs reply, and no field drops more than 2 points.
+3. Of the models kept, pick the cheapest one within 2 points of the best total.
+4. Use Jev only if "rules + jev" beats both the rules and the picked model on direction, needs reply, and match. Otherwise leave Jev out (the brief says not to force it).
+5. Record the table here as D18, and set `MODEL_ID`.
+
+**Reason.** The brief says to measure, not assume.
+Until a model beats the rules on the blind set, adding one costs money and a network wait for no known gain.
