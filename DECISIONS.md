@@ -170,8 +170,13 @@ A model is optional.
 - Without a key, or when the model fails or is slow, the client uses the rules proposal.
   Nothing else changes.
 - Provider: OpenRouter as one gateway, so one key can reach every model under test.
-  OpenRouter does not store or train on API data by default.
-  Requests also set `provider.data_collection: "deny"`, so OpenRouter routes only to providers that do not store data.
+  OpenRouter itself does not store prompts or train on them unless the account opts in.
+  Requests set `provider.zdr: true`, so OpenRouter routes only to endpoints with zero data retention.
+  They also set `provider.data_collection: "deny"`, which excludes providers that train on requests.
+  `data_collection` alone is not enough, because some providers that do not train still keep requests for a while.
+  If no zero-retention endpoint serves a model, the call fails, and that model cannot win in M4.
+- What goes to the model: the paste, her name and email, and only the known candidates that the paste mentions by a name word, contact, or link.
+  The rest of her pipeline never leaves her browser.
 - The model never sets a stage and never judges a candidate.
 - M4 measures the models and Jev.
   A later decision records the numbers.
