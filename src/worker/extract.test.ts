@@ -79,6 +79,24 @@ describe('/api/extract', () => {
     expect(res.status).toBe(429)
   })
 
+  it('refuses a request with an oversized list of known candidates', async () => {
+    const { a, model } = app({ who: user })
+    const many = Array.from({ length: 5_000 }, (_, i) => ({
+      id: `c-${i}`,
+      name: `Person ${i} with a long name`,
+      role: '',
+      contacts: [`p${i}@example.com`],
+      links: [],
+    }))
+    const res = await a.request(
+      '/api/extract',
+      post({ paste: 'hi', ctx: { ...ctx, candidates: many } }),
+      env,
+    )
+    expect(res.status).toBe(400)
+    expect(model).not.toHaveBeenCalled()
+  })
+
   it('refuses an empty or oversized paste', async () => {
     const { a } = app({ who: user })
     for (const paste of ['  ', 'x'.repeat(20_001)]) {

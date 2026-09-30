@@ -3,6 +3,8 @@ import { type ModelCall, readWithModel } from '../core/extract/openrouter'
 import { type ExtractRequest, type ExtractResponse, MAX_EXTRACT } from '../shared/api'
 import type { Env, User } from './env'
 
+const MAX_CONTEXT = 200_000
+
 export interface ExtractDeps {
   fetch: typeof fetch
   openrouterBase?: string
@@ -48,6 +50,10 @@ export async function extractRoute(
     return reply({ error: 'bad_request' }, 400)
   }
   if (typeof body?.paste !== 'string' || !body.paste.trim() || body.paste.length > MAX_EXTRACT) {
+    return reply({ error: 'bad_request' }, 400)
+  }
+  // The known candidates travel with the paste. A cap keeps a crafted request from running up cost.
+  if (!Array.isArray(body.ctx?.candidates) || JSON.stringify(body.ctx).length > MAX_CONTEXT) {
     return reply({ error: 'bad_request' }, 400)
   }
   const call: ModelCall = {
