@@ -26,6 +26,9 @@ export interface PasteDraft {
 
 export const MAX_PASTE = 20_000
 
+const isSubmission = (p: Proposal) =>
+  p.direction === 'in' && p.links.some((l) => l.kind === 'submission' || l.kind === 'repo')
+
 export function pasteDraft(
   p: Proposal,
   paste: string,
@@ -58,7 +61,9 @@ export function pasteDraft(
     },
     direction: p.direction,
     messageDate: when.date,
-    messageTime: when.time,
+    // A submission with no time in the paste waits for her to say when it came in, because a
+    // guessed time could make Late wrong. Other messages default to now.
+    messageTime: !p.messageAt && isSubmission(p) ? '' : when.time,
     links: p.links,
     needsReply: p.needsReply,
     text: paste.slice(0, MAX_PASTE),

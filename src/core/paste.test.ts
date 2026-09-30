@@ -116,6 +116,18 @@ describe('a second paste from the same candidate', () => {
   })
 })
 
+describe('a pasted submission with no time', () => {
+  it('leaves the time for her, because a guess could make Late wrong', () => {
+    const d = read(`here it is https://app-ex.vercel.app`)
+    expect(d.messageDate).toBe('2026-09-30')
+    expect(d.messageTime).toBe('')
+  })
+
+  it('a question with no time defaults to now', () => {
+    expect(read('can I use Postgres?').messageTime).toBe('13:00')
+  })
+})
+
 describe('a first name alone', () => {
   it('does not attach, because another person can share it', () => {
     const sam = candidate({ id: 'c-sam', name: 'Samantha Patel' })

@@ -176,3 +176,19 @@ test('sending the same take-home doc to a second candidate does not attach to th
   await expect(dialog.getByLabel('Attach to')).toHaveValue('new')
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Omar')
 })
+
+test('a pasted submission with no time asks for the time before saving', async ({ page }) => {
+  await seed(page, [])
+  const dialog = await paste(
+    page,
+    `hey Rae! done: https://tidepool-ex.vercel.app\nrepo github.com/ex-mkoval/tidepool`,
+  )
+  await dialog.getByLabel('Name', { exact: true }).fill('Mara Koval')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog.getByText('Time needed')).toBeVisible()
+  await dialog.getByLabel('Time', { exact: true }).last().fill('09:30')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('dialog', { name: 'Mara Koval' })).toContainText(
+    'Wed, Sep 30, 9:30 AM PDT',
+  )
+})
