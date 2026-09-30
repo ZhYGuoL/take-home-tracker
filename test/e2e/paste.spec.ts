@@ -157,3 +157,22 @@ test('a message saved to the wrong candidate moves to the right one in one step'
   await page.getByRole('button', { name: 'Pia Laurent' }).click()
   await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
 })
+
+test('sending the same take-home doc to a second candidate does not attach to the first', async ({
+  page,
+}) => {
+  await seed(page, [])
+  const doc = 'https://docs.google.com/document/d/1SharedBrief/edit'
+  let dialog = await paste(
+    page,
+    `Hi Nadia, here is the take-home assignment: ${doc}\nYou'll have 48 hours.`,
+  )
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Close' }).click()
+  dialog = await paste(
+    page,
+    `Hi Omar, here is the take-home assignment: ${doc}\nYou'll have 48 hours.`,
+  )
+  await expect(dialog.getByLabel('Attach to')).toHaveValue('new')
+  await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Omar')
+})

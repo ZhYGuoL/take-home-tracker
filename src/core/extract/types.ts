@@ -6,6 +6,7 @@ export interface KnownCandidate {
   name: string
   role: string
   contacts: string[]
+  /** Submission and repo links from the candidate's own messages. Never her doc links. */
   links: string[]
 }
 

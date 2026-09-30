@@ -51,19 +51,18 @@ function rememberSource(s: Source) {
   }
 }
 
-/** What the matcher knows about each candidate: contacts, and every link on the timeline. */
+/** What the matcher knows about each candidate: contacts, and the work links they sent. */
 function knownCandidates(candidates: Candidate[], entries: Entry[]): KnownCandidate[] {
   return candidates.map((c) => ({
     id: c.id,
     name: c.name,
     role: c.role,
     contacts: c.contacts,
-    links: [
-      ...(c.takeHomeUrl ? [c.takeHomeUrl] : []),
-      ...entries.flatMap((e) =>
-        e.candidateId === c.id && e.kind === 'message' ? e.links.map((l) => l.url) : [],
-      ),
-    ],
+    links: entries.flatMap((e) =>
+      e.candidateId === c.id && e.kind === 'message' && e.direction === 'in'
+        ? e.links.filter((l) => l.kind === 'submission' || l.kind === 'repo').map((l) => l.url)
+        : [],
+    ),
   }))
 }
 

@@ -20,6 +20,16 @@ function repoOwner(url: string): string | null {
   return owner ? `${u.hostname.replace(/^www\./, '')}/${owner.toLowerCase()}` : null
 }
 
+/** Same last name, and first names that are equal or one is a short form of the other. */
+function samePerson(a: string, b: string): boolean {
+  const [af = '', ...ar] = foldName(a).split(' ')
+  const [bf = '', ...br] = foldName(b).split(' ')
+  if (ar.at(-1) !== br.at(-1)) return false
+  return (
+    af === bf || (Math.min(af.length, bf.length) >= 3 && (af.startsWith(bf) || bf.startsWith(af)))
+  )
+}
+
 export interface MatchInput {
   name: string | null
   contacts: string[]
@@ -38,16 +48,26 @@ export function matchCandidate(input: MatchInput, candidates: KnownCandidate[]):
     if (hits.length === 1 && hits[0]) return { id: hits[0].id, strength: 'strong', via: contact }
   }
 
-  const urls = input.links.map((l) => normalizeUrl(l.url) ?? l.url)
+  // Only the candidate's own work identifies them. Her take-home doc goes to everyone.
+  const urls = input.links
+    .filter((l) => l.kind === 'submission' || l.kind === 'repo')
+    .map((l) => normalizeUrl(l.url) ?? l.url)
+  // A link match gives way when the paste gives a full name that belongs to someone else.
+  // "Alex Moreno" still agrees with "Alexandra Moreno".
+  const agrees = (c: KnownCandidate) => !input.name?.includes(' ') || samePerson(input.name, c.name)
   for (const url of urls) {
     const hits = candidates.filter((c) => c.links.some((l) => (normalizeUrl(l) ?? l) === url))
-    if (hits.length === 1 && hits[0]) return { id: hits[0].id, strength: 'strong', via: url }
+    if (hits.length === 1 && hits[0] && agrees(hits[0])) {
+      return { id: hits[0].id, strength: 'strong', via: url }
+    }
   }
   for (const url of urls) {
     const owner = repoOwner(url)
     if (!owner) continue
     const hits = candidates.filter((c) => c.links.some((l) => repoOwner(l) === owner))
-    if (hits.length === 1 && hits[0]) return { id: hits[0].id, strength: 'strong', via: owner }
+    if (hits.length === 1 && hits[0] && agrees(hits[0])) {
+      return { id: hits[0].id, strength: 'strong', via: owner }
+    }
   }
 
   if (!input.name) return null

@@ -33,6 +33,36 @@ describe('matchCandidate', () => {
     )
   })
 
+  it('a take-home doc link never matches, because she sends it to everyone', () => {
+    const withDoc = [
+      { ...people[1], links: ['https://docs.google.com/document/d/1x/edit'] },
+    ] as KnownCandidate[]
+    const input = {
+      name: 'Omar',
+      contacts: [],
+      links: [{ url: 'https://docs.google.com/document/d/1x/edit', kind: 'doc' as const }],
+    }
+    expect(matchCandidate(input, withDoc)).toBeNull()
+  })
+
+  it('a shared link gives way when the paste names someone else', () => {
+    const input = {
+      name: 'Lena Brandt',
+      contacts: [],
+      links: [{ url: 'https://github.com/ex-trivera/relay', kind: 'repo' as const }],
+    }
+    expect(matchCandidate(input, people)).toBeNull()
+  })
+
+  it('a shared repo still matches under a short form of the same name and a new email', () => {
+    const input = {
+      name: 'Tom Rivera',
+      contacts: ['tom.r@example.org'],
+      links: [{ url: 'https://github.com/ex-trivera/relay', kind: 'repo' as const }],
+    }
+    expect(matchCandidate(input, people)?.id).toBe('b')
+  })
+
   it('a full name matches without accents or case', () => {
     expect(m({ name: 'tomas rivera' })).toMatchObject({ id: 'b', strength: 'strong' })
   })
