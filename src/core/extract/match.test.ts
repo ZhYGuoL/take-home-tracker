@@ -63,6 +63,18 @@ describe('matchCandidate', () => {
     expect(matchCandidate(input, people)?.id).toBe('b')
   })
 
+  it('a full name still matches a candidate saved under one word', () => {
+    const kat: KnownCandidate[] = [
+      { id: 'k', name: 'Kat', role: '', contacts: [], links: ['https://github.com/ex-kat/app'] },
+    ]
+    const input = {
+      name: 'Kat Oyelaran',
+      contacts: [],
+      links: [{ url: 'https://github.com/ex-kat/app', kind: 'repo' as const }],
+    }
+    expect(matchCandidate(input, kat)?.id).toBe('k')
+  })
+
   it('a full name matches without accents or case', () => {
     expect(m({ name: 'tomas rivera' })).toMatchObject({ id: 'b', strength: 'strong' })
   })

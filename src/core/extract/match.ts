@@ -24,7 +24,8 @@ function repoOwner(url: string): string | null {
 function samePerson(a: string, b: string): boolean {
   const [af = '', ...ar] = foldName(a).split(' ')
   const [bf = '', ...br] = foldName(b).split(' ')
-  if (ar.at(-1) !== br.at(-1)) return false
+  // A saved one-word name, such as "Kat", has no last name to disagree with.
+  if (ar.length > 0 && br.length > 0 && ar.at(-1) !== br.at(-1)) return false
   return (
     af === bf || (Math.min(af.length, bf.length) >= 3 && (af.startsWith(bf) || bf.startsWith(af)))
   )
