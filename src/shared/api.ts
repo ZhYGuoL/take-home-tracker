@@ -13,3 +13,18 @@ export type ExtractError = 'model_off' | 'not_allowed' | 'too_many' | 'model_fai
 
 /** The most text the Worker sends to a model. A pasted message is at most this long (D3). */
 export const MAX_EXTRACT = 20_000
+
+/** GET /api/session */
+export type SessionResponse =
+  | {
+      signedIn: false /** False when this server has no Google sign-in configured. */
+      setUp: boolean
+    }
+  | {
+      signedIn: true
+      user: { sub: string; email: string; name: string }
+      /** A short-lived Google token for the Sheets and Drive calls the browser makes. */
+      accessToken: string
+      expiresAt: number
+      google: { sheets: string; drive: string }
+    }
