@@ -229,6 +229,9 @@ It is ambiguous across zones and daylight-saving changes.
   No paste, model output, or automatic rule can make one.
 - Automatic changes never touch an Advanced or Passed candidate.
 - The recruiter can set any stage by hand, including an earlier one.
+- One exception to "only forward": the stage comes from the entries (D3).
+  If the recruiter moves the only submission message to another candidate, the first candidate goes back to Sent.
+  This is correct, because that candidate never submitted.
 
 **"Needs you"** shows a candidate when one of these is true:
 - The stage is Submitted.
