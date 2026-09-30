@@ -93,7 +93,7 @@ You need:
 
 ### 1. Get the code
 
-1. On the GitHub page of this project, click **Code**, then **Download ZIP**. Open the ZIP file to unpack it.
+1. On [the GitHub page of this project](https://github.com/ZhYGuoL/take-home-tracker), click **Code**, then **Download ZIP**. Open the ZIP file to unpack it.
 2. Open Terminal: press Command and Space, type `Terminal`, and press Return.
 3. Type `cd ` with a space after it, drag the unpacked folder into the Terminal window, and press Return.
 4. Run `npx pnpm@10.18.0 install`. If it asks to install `pnpm`, type `y`.

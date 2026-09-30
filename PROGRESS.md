@@ -132,7 +132,7 @@ Every remaining item is in `BLOCKERS.md`:
 - B2: a model key, to measure the models and maybe turn one on.
 - B3: a Google OAuth client, so real sign-in works.
 - B4: deploy a copy.
-- B5: a public GitHub repo.
+- B5 is done: the repo is public at https://github.com/ZhYGuoL/take-home-tracker.
 - B6: check F10 on a real copy, and check sign-in from the iPhone Home Screen.
 
 STATUS: BLOCKED
