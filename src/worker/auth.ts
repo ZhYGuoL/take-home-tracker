@@ -161,6 +161,9 @@ export function authRoutes(app: Hono<{ Bindings: Env }>, deps: AuthDeps) {
     }
     // Google lets her untick Drive on the consent screen. Without it, no save can work.
     if (!tokens.scope?.split(' ').includes(DRIVE_FILE)) {
+      // End the partial grant, so the app does not stay in her Google account.
+      const token = tokens.refresh_token ?? tokens.access_token
+      if (token) await postForm(deps, cfg.endpoints.revoke, { token }).catch(() => null)
       deleteCookie(c, OAUTH, { path: '/auth' })
       return c.redirect('/?signin=drive', 302)
     }

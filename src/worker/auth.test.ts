@@ -136,6 +136,8 @@ describe('sign-in', () => {
     const g = fakeGoogle({ scope: 'openid email profile' })
     const { back } = await signIn(g)
     expect(back.headers.get('location')).toBe('/?signin=drive')
+    // The grant goes too, so the app does not stay in her Google account.
+    expect(g.calls.find((c) => c.url === cfg.endpoints.revoke)?.form.get('token')).toBe('rt-1')
     expect(back.headers.getSetCookie().some((c) => /^tht_session=[^;]+/.test(c))).toBe(false)
   })
 
