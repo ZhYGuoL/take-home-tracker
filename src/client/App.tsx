@@ -5,11 +5,20 @@ import {
   emptyDraft,
   submissionFromDraft,
 } from '../core/draft'
+import {
+  applyFilters,
+  countOptions,
+  type Filters,
+  filtersFromQuery,
+  filtersToQuery,
+} from '../core/filters'
 import { sortRows } from '../core/sort'
 import type { Entry } from '../core/types'
 import { CandidateForm } from './components/CandidateForm'
 import { CandidateTable } from './components/CandidateTable'
 import { DetailPanel } from './components/DetailPanel'
+import { EmptyResults } from './components/EmptyResults'
+import { FilterBar } from './components/FilterBar'
 import { Sheet, SheetHeader } from './components/Sheet'
 import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
@@ -27,7 +36,10 @@ export function App() {
   const now = useNow(deadlines)
   const rows = useRows(now)
   const zone = useMemo(viewerZone, [])
-  const search = new URLSearchParams(useSearch())
+  const query = useSearch()
+  const search = new URLSearchParams(query)
+  const filters = useMemo(() => filtersFromQuery(new URLSearchParams(query)), [query])
+  const setFilters = (f: Filters) => navigate(filtersToQuery(f), 'replace')
   const openId = search.get('c')
   const adding = search.get('new') === '1'
   const openRow = rows.find((r) => r.candidate.id === openId) ?? null
@@ -49,8 +61,18 @@ export function App() {
     navigate({ new: null, c: candidate.id }, 'replace')
   }
 
-  const sorted = useMemo(() => sortRows(rows, 'all'), [rows])
-  const ordered = useStableOrder(sorted, (r) => r.candidate.id, 'all')
+  const counts = useMemo(() => countOptions(rows, filters, zone), [rows, filters, zone])
+  const shown = useMemo(
+    () => sortRows(applyFilters(rows, filters, zone), filters.view),
+    [rows, filters, zone],
+  )
+
+  // A new view or filter sorts again. Her own changes keep rows in place.
+  const ordered = useStableOrder(
+    shown,
+    (r) => r.candidate.id,
+    JSON.stringify(filtersToQuery(filters)),
+  )
 
   const openSubmission = (row: Row) => {
     const link = row.derived.submission ?? row.derived.repo
@@ -82,6 +104,9 @@ export function App() {
           Add
         </button>
       </header>
+      {rows.length > 0 && (
+        <FilterBar filters={filters} counts={counts} zone={zone} now={now} onChange={setFilters} />
+      )}
       <main className="panel results">
         {rows.length === 0 ? (
           <div className="empty">
@@ -90,6 +115,8 @@ export function App() {
               Add candidate
             </button>
           </div>
+        ) : shown.length === 0 ? (
+          <EmptyResults rows={rows} filters={filters} zone={zone} onChange={setFilters} />
         ) : (
           <CandidateTable
             rows={ordered}

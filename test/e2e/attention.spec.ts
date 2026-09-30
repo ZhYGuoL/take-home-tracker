@@ -1,22 +1,88 @@
-import { expect, rowOf, test } from './fixtures'
-import { person, seed, submitted } from './seed'
+import { expect, rowOf, shownNames, stageButton, test } from './fixtures'
+import { asked, openedAt, person, seed, staged, submitted } from './seed'
 
 const LA = 'America/Los_Angeles'
 const NY = 'America/New_York'
 // Mon Oct 5 2026, 12:00 PDT.
 const NOW = new Date('2026-10-05T19:00:00Z')
 
-test('a question logged by hand turns on Needs reply', async ({ page }) => {
+test.describe('Needs you', () => {
+  const ada = person('Ada Lindqvist', { due: ['2026-10-02', '17:00', LA] })
+  const ben = person('Ben Osei', { due: ['2026-10-09', '17:00', LA] })
+  const cyd = person('Cyd Marsh', { due: ['2026-10-01', '17:00', LA] })
+  const dev = person('Dev Patel')
+  const eli = person('Eli Brandt', { due: ['2026-10-02', '23:00', LA] })
   const fay = person('Fay Nakamura', { due: ['2026-10-09', '17:00', LA] })
-  await page.clock.install({ time: NOW })
-  await seed(page, [fay])
-  await page.getByRole('button', { name: 'Fay Nakamura' }).click()
-  const detail = page.getByRole('dialog', { name: 'Fay Nakamura' })
-  await detail.getByRole('button', { name: 'Add message' }).click()
-  await detail.getByLabel('Message', { exact: true }).fill('Is it fine to use Supabase auth?')
-  await detail.getByRole('button', { name: 'Add message' }).last().click()
-  await expect(detail.getByText('Needs reply', { exact: true })).toBeVisible()
-  await expect(detail.getByText('Is it fine to use Supabase auth?')).toBeVisible()
+  const gus = person('Gus Ferreira', { due: ['2026-10-01', '17:00', LA] })
+  const pipeline = [
+    ada,
+    ben,
+    asked(ben, '2026-10-04T10:00:00Z'),
+    cyd,
+    submitted(cyd, '2026-10-02T02:00:00Z'),
+    dev,
+    staged(dev, '2026-10-03T10:00:00Z', 'advanced'),
+    eli,
+    submitted(eli, '2026-10-02T20:00:00Z'),
+    openedAt(eli, '2026-10-03T09:00:00Z'),
+    fay,
+    gus,
+    staged(gus, '2026-10-02T09:00:00Z', 'passed'),
+  ]
+
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install({ time: NOW })
+    await seed(page, pipeline)
+  })
+
+  test('shows exactly overdue, needs reply, and submitted, most urgent first', async ({ page }) => {
+    await expect(page.getByRole('radio', { name: /Needs you/ })).toBeChecked()
+    await expect.poll(() => shownNames(page)).toEqual(['Ada Lindqvist', 'Ben Osei', 'Cyd Marsh'])
+    await expect(page.getByRole('radio', { name: /Needs you/ })).toContainText('3')
+    await expect(page.getByRole('radio', { name: /All/ })).toContainText('7')
+    await expect(rowOf(page, 'Ada Lindqvist')).toContainText('Overdue')
+    await expect(rowOf(page, 'Ben Osei')).toContainText('Needs reply')
+    await expect(rowOf(page, 'Cyd Marsh')).toContainText('Late')
+  })
+
+  test('All shows every candidate, and a closed or reviewed one never shows as needing her', async ({
+    page,
+  }) => {
+    await page.getByRole('radio', { name: /All/ }).click()
+    await expect.poll(async () => (await shownNames(page)).length).toBe(7)
+    await expect(rowOf(page, 'Gus Ferreira')).not.toContainText('Overdue')
+    await expect(rowOf(page, 'Eli Brandt')).not.toContainText('Late')
+  })
+
+  test('replying and opening the submission take candidates out of Needs you', async ({ page }) => {
+    await page.getByRole('button', { name: 'Ben Osei' }).click()
+    await page.getByRole('button', { name: 'Replied' }).click()
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect.poll(() => shownNames(page)).toEqual(['Ada Lindqvist', 'Cyd Marsh'])
+
+    await page.getByRole('button', { name: 'Cyd Marsh' }).click()
+    const popup = page.waitForEvent('popup')
+    await page
+      .getByRole('dialog', { name: 'Cyd Marsh' })
+      .getByRole('link', { name: `${cyd.id}.example.com` })
+      .first()
+      .click()
+    await (await popup).close()
+    await expect(stageButton(page, 'Reviewing')).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect.poll(() => shownNames(page)).toEqual(['Ada Lindqvist'])
+  })
+
+  test('a question logged by hand turns on Needs reply', async ({ page }) => {
+    await page.getByRole('radio', { name: /All/ }).click()
+    await page.getByRole('button', { name: 'Fay Nakamura' }).click()
+    const detail = page.getByRole('dialog', { name: 'Fay Nakamura' })
+    await detail.getByRole('button', { name: 'Add message' }).click()
+    await detail.getByLabel('Message', { exact: true }).fill('Is it fine to use Supabase auth?')
+    await detail.getByRole('button', { name: 'Add message' }).last().click()
+    await expect(detail.getByText('Needs reply', { exact: true })).toBeVisible()
+    await expect(detail.getByText('Is it fine to use Supabase auth?')).toBeVisible()
+  })
 })
 
 test.describe('the deadline boundary', () => {
@@ -28,6 +94,7 @@ test.describe('the deadline boundary', () => {
     expect(hana.deadline?.at).toBe(due.toISOString())
     await page.clock.install({ time: NOW })
     await seed(page, [hana])
+    await page.getByRole('radio', { name: /All/ }).click()
     await expect(rowOf(page, 'Hana Kim')).not.toContainText('Overdue')
 
     await page.clock.pauseAt(due)
@@ -35,6 +102,8 @@ test.describe('the deadline boundary', () => {
 
     await page.clock.runFor(1)
     await expect(rowOf(page, 'Hana Kim')).toContainText('Overdue')
+    await page.getByRole('radio', { name: /Needs you/ }).click()
+    await expect.poll(() => shownNames(page)).toEqual(['Hana Kim'])
   })
 
   test('a submission exactly at the deadline is on time, one second later is Late', async ({
@@ -49,6 +118,7 @@ test.describe('the deadline boundary', () => {
       late,
       submitted(late, '2026-10-02T21:00:01.000Z'),
     ])
+    await page.getByRole('radio', { name: /All/ }).click()
     await expect(rowOf(page, 'Ines Duarte')).not.toContainText('Late')
     await expect(rowOf(page, 'Jon Okoro')).toContainText('Late')
   })

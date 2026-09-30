@@ -1,7 +1,8 @@
 import { addCandidate, expect, stageButton, test } from './fixtures'
 
+// These tests look at every candidate, so they use the All view instead of Needs you.
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=all')
 })
 
 test('a candidate added by hand shows in the list at Sent and survives a reload', async ({
