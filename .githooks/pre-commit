@@ -1,0 +1,3 @@
+#!/bin/sh
+# The fast check must pass before every commit.
+exec pnpm -s check
