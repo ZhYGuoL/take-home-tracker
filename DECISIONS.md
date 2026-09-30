@@ -151,8 +151,10 @@ The Drive API has no conditional update, so two devices that save at the same ti
 - If Google refuses an access token, the browser asks `/api/session?refresh=1` for a new one.
   If Google also refuses the refresh token, the Worker clears the cookie and she signs in again.
   Saves that did not reach her Sheet stay on the device and go out after she signs in.
-- The home screen icon opens the app in the browser, not as a standalone app.
-  Google sign-in inside a standalone iPhone web app is not reliable.
+- The web manifest asks for the browser display, not a standalone app.
+  iOS 26 can still open a Home Screen site as a web app, unless "Open as Web App" is off when she adds it.
+  A standalone web app may not keep the Google sign-in, so the README tells her to turn that switch off.
+  B6 checks this on a real iPhone.
 - The Google consent screen must be in "In production" status.
   In "Testing" status, only listed test users can sign in, and refresh tokens expire after 7 days.
   With only non-sensitive scopes, Google does not require verification to publish.
@@ -425,7 +427,7 @@ Each request caps output at 1,000 tokens, which also bounds a reasoning model.
 At 20 pastes a day, every option costs under $0.05 a day.
 
 **Choice.** The rules are the reader until a model beats them.
-The model stays off: the Worker needs both `OPENROUTER_API_KEY` and `MODEL_ID`, and `MODEL_ID` is unset.
+The model stays off: the Worker needs three secrets, `OPENROUTER_API_KEY`, `MODEL_ID`, and `MODEL_ALLOWED_EMAILS` (D13), and none is set.
 
 **Rule for turning it on.** Run `pnpm eval --set blind --jev`. The run uses the app's 12-second limit, and a failed or slow call counts as wrong. Then:
 1. Take the merged reading ("rules + model") of each chat model.
@@ -435,7 +437,7 @@ The model stays off: the Worker needs both `OPENROUTER_API_KEY` and `MODEL_ID`, 
 4. Use Jev only if "rules + jev" gets more cases right than both the rules and the picked model on direction, needs reply, and match, with no errors.
    Its requests demand zero retention too. If TypeSafe cannot serve that, every call fails and Jev is out.
    Otherwise leave Jev out, because the brief says not to force it.
-5. Record the table as a new decision, and set `MODEL_ID`.
+5. Record the table as a new decision, and set the three secrets in B2, step 6.
 
 **Reason.** The brief says to measure, not assume.
 On 40 cases, one case is 2.5 points, so the rule counts cases, not percentages.

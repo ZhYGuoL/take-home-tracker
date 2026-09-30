@@ -10,6 +10,10 @@ One of them is a personal sentence.
 Later commits removed all of them from the files, and no other commit adds her name.
 They are still in the git history, and the unattended run may not rewrite history.
 
+Commit `c55e3c4` added the phone number `+1 555 010 0123` to the demo data, and `a9649e1` removed it.
+It has the format of a Japanese mobile number, so it may belong to a real person.
+The new history in step 2 removes it too.
+
 Every commit also carries the git author email of this computer.
 If you want the GitHub no-reply address in public, the new history in step 2 is the moment to set it.
 
@@ -72,7 +76,7 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
    For now, add only this authorized redirect URI, to try real Google locally:
    `http://localhost:5173/auth/google/callback`.
    B4 adds the web address after the first deploy, because it does not exist before.
-6. Keep the client ID and secret for B4, step 4.
+6. Copy the client ID and secret now, or click **Download JSON**. Google shows the secret only once. You need them in B4, step 4.
 
 ## B4. Deploy a copy (needs B3)
 
@@ -81,9 +85,10 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
 **Why it matters.** The recruiter can only use a copy on the web.
 
 **Steps.**
-1. Create a free Cloudflare account. It needs no card, and the free plan fails instead of billing (D1).
+1. Create a free Cloudflare account, and verify its email address. It needs no card, and the free plan fails instead of billing (D1).
 2. In this folder, run `npx wrangler login`.
 3. Run `pnpm run deploy`. It builds, checks the production bundle (D5), and prints the `workers.dev` address.
+   On a new account it first asks you to register a `workers.dev` subdomain. Type `y`, and pick a short name.
 4. Set the three secrets. Run each command and paste the value when asked:
    ```
    npx wrangler secret put GOOGLE_CLIENT_ID --name take-home-tracker
@@ -93,8 +98,8 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
    For `SESSION_SECRET`, paste the output of `openssl rand -base64 48`.
    Always give `--name take-home-tracker`.
    Without it, wrangler can pick the test Worker that `pnpm e2e` configures.
-5. At console.cloud.google.com, open the OAuth client from B3.
-   Add the authorized redirect URI `https://<the address from step 3>/auth/google/callback`, and save.
+5. At console.cloud.google.com, in **Branding**, add the address from step 3 without `https://` under **Authorized domains**.
+   Then open the OAuth client from B3, add the address followed by `/auth/google/callback` as an authorized redirect URI, and save.
 6. Open the address, sign in with your own Google account, and add a test candidate.
    Check that a Sheet named "Take-home tracker" appears in your Google Drive.
 7. Send the address to the recruiter yourself. The run never contacts her.
@@ -122,5 +127,7 @@ Everything the run can check is checked: a fresh clone installs and runs with `p
 **Steps.**
 1. After B4, follow the README section "Start using it" with a second Google account, in a private window.
 2. Check that the second account sees an empty list, and that its own "Take-home tracker" Sheet appears in its Drive.
-3. If you want, follow "Run your own copy" too, with a new Cloudflare account and Google project.
-4. If the steps work, set F10 to `"passes": true` in `features.json`.
+3. On a real iPhone, add the address to the Home Screen as the README says, with **Open as Web App** turned off. Check that sign-in works from the icon.
+   Then try it with **Open as Web App** on. If sign-in works there too, the README and D4 can drop that step.
+4. If you want, follow "Run your own copy" too, with a new Cloudflare account and Google project.
+5. If the steps work, set F10 to `"passes": true` in `features.json`.
