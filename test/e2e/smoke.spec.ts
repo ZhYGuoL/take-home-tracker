@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test('an empty tracker says it has no candidates', async ({ page }) => {
   await page.goto('/')
