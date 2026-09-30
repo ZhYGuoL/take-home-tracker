@@ -1,0 +1,101 @@
+import type { Proposal } from '../src/core/extract/types'
+import { normalizeUrl } from '../src/core/links'
+import type { Case, Expected } from './types'
+
+export const FIELDS = [
+  'name',
+  'contacts',
+  'role',
+  'source',
+  'direction',
+  'messageAt',
+  'links',
+  'deadline',
+  'needsReply',
+  'match',
+] as const
+export type Field = (typeof FIELDS)[number]
+
+const MINUTE = 60_000
+const lower = (s: string | null) => (s === null ? null : s.trim().toLowerCase())
+const url = (u: string) => normalizeUrl(u) ?? u
+const sameSet = (a: string[], b: string[]) => {
+  const x = [...new Set(a)].sort()
+  const y = [...new Set(b)].sort()
+  return x.length === y.length && x.every((v, i) => v === y[i])
+}
+const sameTime = (a: string | null, b: string | null) =>
+  a === null || b === null ? a === b : Math.abs(Date.parse(a) - Date.parse(b)) < MINUTE
+
+/**
+ * Which fields a case checks. A field the paste does not state is only checked where
+ * saying nothing is itself the right answer: no links, no deadline, no match, no reply needed.
+ */
+export function checked(e: Expected): Field[] {
+  return FIELDS.filter((f) => {
+    if (f === 'name' || f === 'role' || f === 'source' || f === 'messageAt') return e[f] !== null
+    if (f === 'contacts') return e.contacts.length > 0
+    return true
+  })
+}
+
+export function fieldCorrect(f: Field, e: Expected, p: Proposal): boolean {
+  switch (f) {
+    case 'name':
+      return lower(p.name) === lower(e.name)
+    case 'contacts':
+      return e.contacts.every((c) => p.contacts.includes(c))
+    case 'role':
+      return lower(p.role) === lower(e.role)
+    case 'source':
+      return p.source === e.source
+    case 'direction':
+      return p.direction === e.direction
+    case 'messageAt':
+      return sameTime(p.messageAt, e.messageAt)
+    case 'links':
+      return sameSet(
+        p.links.map((l) => `${l.kind} ${url(l.url)}`),
+        e.links.map((l) => `${l.kind} ${url(l.url)}`),
+      )
+    case 'deadline':
+      return sameTime(p.deadline?.at ?? null, e.deadline)
+    case 'needsReply':
+      return p.needsReply === e.needsReply
+    case 'match':
+      return (p.match?.id ?? null) === e.match
+  }
+}
+
+export interface CaseResult {
+  id: string
+  wrong: Field[]
+}
+
+export interface Score {
+  /** Correct over checked, per field. */
+  fields: Record<Field, { correct: number; checked: number }>
+  cases: CaseResult[]
+}
+
+export function score(cases: Case[], proposals: Proposal[]): Score {
+  const fields = Object.fromEntries(
+    FIELDS.map((f) => [f, { correct: 0, checked: 0 }]),
+  ) as Score['fields']
+  const results: CaseResult[] = []
+  cases.forEach((c, i) => {
+    const p = proposals[i]
+    if (!p) throw new Error(`no proposal for ${c.id}`)
+    const wrong: Field[] = []
+    for (const f of checked(c.expected)) {
+      fields[f].checked++
+      if (fieldCorrect(f, c.expected, p)) fields[f].correct++
+      else wrong.push(f)
+    }
+    results.push({ id: c.id, wrong })
+  })
+  return { fields, cases: results }
+}
+
+export const ratio = (s: { correct: number; checked: number }) =>
+  s.checked === 0 ? 1 : s.correct / s.checked
