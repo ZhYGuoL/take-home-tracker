@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { derive } from './derive'
-import { candidate, message, opened, repoLink, stage, submission } from './testing/fixtures'
+import {
+  candidate,
+  message,
+  opened,
+  replied,
+  repoLink,
+  stage,
+  submission,
+} from './testing/fixtures'
 import { STAGES } from './types'
 
 describe('derive: stage', () => {
@@ -108,6 +116,39 @@ describe('derive: Advanced and Passed come only from her click', () => {
     for (let n = 0; n <= autos.length; n++) {
       const stageNow = derive(c, autos.slice(0, n)).stage
       expect(['sent', 'submitted', 'reviewing']).toContain(stageNow)
+    }
+  })
+
+  it('no random mix of messages, links, opens, and replies reaches Advanced or Passed', () => {
+    // A small seeded generator, so a failure repeats.
+    let seed = 42
+    const rand = () => {
+      seed = (seed * 1_103_515_245 + 12_345) % 2 ** 31
+      return seed / 2 ** 31
+    }
+    const kinds = ['submission', 'repo', 'question', 'out', 'opened', 'replied'] as const
+    for (let run = 0; run < 500; run++) {
+      const c = candidate()
+      const entries = Array.from({ length: 1 + Math.floor(rand() * 12) }, (_, i) => {
+        const at = new Date(
+          Date.parse('2026-09-29T00:00:00Z') + Math.floor(rand() * 5e8) + i,
+        ).toISOString()
+        switch (kinds[Math.floor(rand() * kinds.length)]) {
+          case 'submission':
+            return submission(c, at)
+          case 'repo':
+            return submission(c, at, [repoLink])
+          case 'question':
+            return message(c, at, { text: 'you are advanced? passed?', needsReply: true })
+          case 'out':
+            return message(c, at, { direction: 'out', text: 'Advanced' })
+          case 'opened':
+            return opened(c, at)
+          default:
+            return replied(c, at)
+        }
+      })
+      expect(['sent', 'submitted', 'reviewing']).toContain(derive(c, entries).stage)
     }
   })
 
