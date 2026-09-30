@@ -242,14 +242,15 @@ function LinkFields({
   const [kind, setKind] = useState<LinkKind>('submission')
   const [when, setWhen] = useState(() => localParts(new Date().toISOString(), zone))
   const [error, setError] = useState<string | null>(null)
+  const [whenError, setWhenError] = useState<string | null>(null)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const normalized = normalizeUrl(url)
-    if (!normalized) {
-      setError('Not a web link')
-      return
-    }
+    const missing = !when.date ? 'Date needed' : !when.time ? 'Time needed' : null
+    setError(normalized ? null : 'Not a web link')
+    setWhenError(missing)
+    if (!normalized || missing) return
     void repo.saveEntry({
       id: newId(),
       candidateId: candidate.id,
@@ -280,16 +281,19 @@ function LinkFields({
           autoFocus
         />
       </label>
+      <label className="field">
+        <span className="field-label">Kind</span>
+        <select value={kind} onChange={(e) => setKind(e.target.value as LinkKind)}>
+          <option value="submission">Submission</option>
+          <option value="repo">Repo</option>
+        </select>
+      </label>
       <div className="field-row">
-        <label className="field">
-          <span className="field-label">Kind</span>
-          <select value={kind} onChange={(e) => setKind(e.target.value as LinkKind)}>
-            <option value="submission">Submission</option>
-            <option value="repo">Repo</option>
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Came in</span>
+        <label className="field" data-invalid={whenError ? true : undefined}>
+          <span className="field-label">
+            Came in
+            {whenError && <span className="field-error">{whenError}</span>}
+          </span>
           <input
             type="date"
             value={when.date}

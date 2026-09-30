@@ -160,3 +160,13 @@ test('a wrong link can be removed from the timeline, and the stage follows', asy
   await expect(detail.getByText('wrong-person.example.com')).toHaveCount(0)
   await expect(stageRadio(page, 'Sent')).toBeChecked()
 })
+
+test('a link with its time cleared asks for the time instead of failing', async ({ page }) => {
+  const detail = await addCandidate(page, { name: 'Tess Albright' })
+  await detail.getByRole('button', { name: 'Add link' }).click()
+  await detail.getByLabel('Link', { exact: true }).fill('tess.example.com')
+  await detail.getByLabel('Time', { exact: true }).fill('')
+  await detail.getByRole('button', { name: 'Add link' }).last().click()
+  await expect(detail.getByText('Time needed')).toBeVisible()
+  await expect(stageRadio(page, 'Sent')).toBeChecked()
+})
