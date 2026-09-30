@@ -18,22 +18,37 @@ export function nextWake(now: number, deadlines: readonly number[], tick = TICK_
   return wait
 }
 
-/** The current time. It changes on each tick and right after each deadline in `deadlines`. */
+/**
+ * The current time. It changes on each tick, right after each deadline in `deadlines`, when the
+ * deadlines themselves change, and when she comes back to the tab.
+ */
 export function useNow(deadlines: readonly number[] = []): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     let id = 0
+    const tick = () => setNow(Date.now())
     const arm = () => {
       id = window.setTimeout(
         () => {
-          setNow(Date.now())
+          tick()
           arm()
         },
         nextWake(Date.now(), deadlines),
       )
     }
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      window.clearTimeout(id)
+      tick()
+      arm()
+    }
+    tick()
     arm()
-    return () => window.clearTimeout(id)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearTimeout(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [deadlines])
   return now
 }

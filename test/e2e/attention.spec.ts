@@ -175,3 +175,18 @@ test.describe('replies logged by hand', () => {
     await expect(detail.getByRole('button', { name: 'Replied' })).toHaveCount(0)
   })
 })
+
+test('a deadline edited into the past shows Overdue at once', async ({ page }) => {
+  const rae = person('Remy Okoye', { due: ['2026-10-09', '17:00', LA] })
+  await page.clock.install({ time: NOW })
+  await seed(page, [rae])
+  await page.getByRole('radio', { name: /All/ }).click()
+  await page.getByRole('button', { name: 'Remy Okoye' }).click()
+  await page.getByRole('button', { name: 'Edit' }).click()
+  const edit = page.getByRole('dialog', { name: 'Remy Okoye' })
+  await edit.getByLabel('Deadline', { exact: true }).fill('2026-10-04')
+  await edit.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Close' }).click()
+  // Well under the 30-second tick.
+  await expect(rowOf(page, 'Remy Okoye')).toContainText('Overdue', { timeout: 2_000 })
+})

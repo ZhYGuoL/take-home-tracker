@@ -29,9 +29,15 @@ export function App() {
   const repo = useRepo()
   const saveStatus = useSaveStatus()
   const { candidates, entries } = useLive()
+  // Keyed on the deadline values, so an edit to notes does not restart the clock.
+  const deadlineKey = candidates.map((c) => c.deadline?.at ?? '').join('|')
   const deadlines = useMemo(
-    () => candidates.flatMap((c) => (c.deadline ? [Date.parse(c.deadline.at)] : [])),
-    [candidates],
+    () =>
+      deadlineKey
+        .split('|')
+        .filter(Boolean)
+        .map((at) => Date.parse(at)),
+    [deadlineKey],
   )
   const now = useNow(deadlines)
   const rows = useRows(now)
