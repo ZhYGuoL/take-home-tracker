@@ -1,0 +1,53 @@
+/* Design tokens from the mal-gg-design skill (mal.gg/yc, extracted 2026-09-21). Light only. */
+:root {
+  --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --ink: #0a0a0a;
+  --ink-2: #5b5f66;
+  --ink-3: #8a8f98;
+  --ink-muted: #737373;
+  --link: #1e46d6;
+
+  --page: #fafafa;
+  --surface: #ffffff;
+  --subtle: #f5f6f7;
+  --hover: #f3f4f6;
+  --selected: #eff3ff;
+  --row-selected: #eef0f3;
+
+  --line: #e4e5e8;
+  --line-strong: #d3d5da;
+  --line-subtle: #efeff1;
+
+  --focus: #3177f0;
+
+  /* Semantic tones. One foreground, one soft background, no ramp. */
+  --green: #0e8f5e;
+  --green-soft: #e9f7f0;
+  --gold: #b7791f;
+  --gold-soft: #fdf4e3;
+  --blue: #2563eb;
+  --blue-soft: #eaf1fe;
+  --orange: #d0622b;
+  --orange-soft: #fdf0e8;
+  --pink: #ce3560;
+  --pink-soft: #fdebf0;
+  --purple: #6a59cc;
+  --purple-soft: #f0edfb;
+
+  --shadow-card:
+    0 1px 2px 0 #5258660f, 0 0 0 1px #e4e5e8, 0 1px 2px 0 #0000000a, 0 1px 2px 0 #00000005;
+  --shadow-popover: 0 12px 32px -8px #0f17292e, 0 0 0 1px #e4e5e8, 0 2px 6px 0 #0000000f;
+  --shadow-panel: 0 3px 6px -1px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-chip: 0 1px 1px rgba(15, 23, 41, 0.05);
+  --focus-ring: inset 0 0 0 0.8px rgba(49, 119, 240, 0.4);
+
+  --radius-inner: 8px;
+  --radius-plate: 12px;
+  --radius-panel: 16px;
+
+  --panel-width: 340px;
+  --row-height: 64px;
+  --header-height: 48px;
+}
