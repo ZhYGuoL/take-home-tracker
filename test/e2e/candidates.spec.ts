@@ -1,4 +1,4 @@
-import { addCandidate, expect, stageRadio, test } from './fixtures'
+import { addCandidate, expect, stageButton, test } from './fixtures'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -13,7 +13,7 @@ test('a candidate added by hand shows in the list at Sent and survives a reload'
     contact: 'rowan@example.com',
     preset: '48h',
   })
-  await expect(stageRadio(page, 'Sent')).toBeChecked()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
   await detail.getByRole('button', { name: 'Close' }).click()
   await expect(page).not.toHaveURL(/[?&]c=/)
 
@@ -21,7 +21,7 @@ test('a candidate added by hand shows in the list at Sent and survives a reload'
   const row = page.getByRole('button', { name: 'Rowan Okafor' })
   await expect(row).toBeVisible()
   await row.click()
-  await expect(stageRadio(page, 'Sent')).toBeChecked()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('dialog', { name: 'Rowan Okafor' })).toContainText(
     'Founding engineer',
   )
@@ -34,12 +34,12 @@ test('a submission link moves Sent to Submitted, and opening it moves to Reviewi
     name: 'Priya Raman',
     submission: 'priya-ledger.example.com',
   })
-  await expect(stageRadio(page, 'Submitted')).toBeChecked()
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
 
   const popup = page.waitForEvent('popup')
   await detail.getByRole('link', { name: 'priya-ledger.example.com' }).first().click()
   await (await popup).close()
-  await expect(stageRadio(page, 'Reviewing')).toBeChecked()
+  await expect(stageButton(page, 'Reviewing')).toHaveAttribute('aria-pressed', 'true')
   await expect(detail.getByText('Opened submission')).toBeVisible()
 })
 
@@ -47,20 +47,20 @@ test('Advanced and Passed come only from her click, and a later link does not un
   page,
 }) => {
   const detail = await addCandidate(page, { name: 'Diego Alvarez' })
-  await stageRadio(page, 'Advanced').click()
-  await expect(stageRadio(page, 'Advanced')).toBeChecked()
+  await stageButton(page, 'Advanced').click()
+  await expect(stageButton(page, 'Advanced')).toHaveAttribute('aria-pressed', 'true')
   await expect(detail.getByText('Stage set to Advanced')).toBeVisible()
 
   await detail.getByRole('button', { name: 'Add link' }).click()
   await detail.getByLabel('Link', { exact: true }).fill('diego-fix.example.com')
   await detail.getByRole('button', { name: 'Add link' }).last().click()
   await expect(detail.getByRole('link', { name: 'diego-fix.example.com' }).first()).toBeVisible()
-  await expect(stageRadio(page, 'Advanced')).toBeChecked()
+  await expect(stageButton(page, 'Advanced')).toHaveAttribute('aria-pressed', 'true')
 
-  await stageRadio(page, 'Passed').click()
-  await expect(stageRadio(page, 'Passed')).toBeChecked()
-  await stageRadio(page, 'Sent').click()
-  await expect(stageRadio(page, 'Sent')).toBeChecked()
+  await stageButton(page, 'Passed').click()
+  await expect(stageButton(page, 'Passed')).toHaveAttribute('aria-pressed', 'true')
+  await stageButton(page, 'Sent').click()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('editing a candidate changes the list', async ({ page }) => {
@@ -152,13 +152,13 @@ test('a wrong link can be removed from the timeline, and the stage follows', asy
   await detail.getByRole('button', { name: 'Add link' }).click()
   await detail.getByLabel('Link', { exact: true }).fill('wrong-person.example.com')
   await detail.getByRole('button', { name: 'Add link' }).last().click()
-  await expect(stageRadio(page, 'Submitted')).toBeChecked()
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
 
   const item = detail.getByRole('listitem').filter({ hasText: 'wrong-person.example.com' })
   await item.getByRole('button', { name: 'Remove' }).click()
   await item.getByRole('button', { name: 'Confirm remove' }).click()
   await expect(detail.getByText('wrong-person.example.com')).toHaveCount(0)
-  await expect(stageRadio(page, 'Sent')).toBeChecked()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('a link with its time cleared asks for the time instead of failing', async ({ page }) => {
@@ -168,5 +168,30 @@ test('a link with its time cleared asks for the time instead of failing', async 
   await detail.getByLabel('Time', { exact: true }).fill('')
   await detail.getByRole('button', { name: 'Add link' }).last().click()
   await expect(detail.getByText('Time needed')).toBeVisible()
-  await expect(stageRadio(page, 'Sent')).toBeChecked()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('arrow keys move along the stages without setting one', async ({ page }) => {
+  await addCandidate(page, { name: 'Uma Reyes' })
+  await stageButton(page, 'Sent').focus()
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+  await expect(stageButton(page, 'Advanced')).toBeFocused()
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('Enter')
+  await expect(stageButton(page, 'Advanced')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Tab stays inside the add dialog, and focus returns to Add when it closes', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'iphone', 'no Tab key on a phone')
+  const add = page.getByRole('button', { name: 'Add', exact: true }).first()
+  await add.click()
+  const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+  for (let i = 0; i < 40; i++) await page.keyboard.press('Tab')
+  await expect(dialog.locator(':focus')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(add).toBeFocused()
 })

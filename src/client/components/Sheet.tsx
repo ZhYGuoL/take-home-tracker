@@ -21,11 +21,43 @@ export function Sheet({ label, variant, onClose, children }: Props) {
   }, [onClose])
 
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
     const el = ref.current
-    if (!el || el.contains(document.activeElement)) return
-    const first = el.querySelector<HTMLElement>('[data-autofocus]')
-    ;(first ?? el).focus()
+    if (el && !el.contains(document.activeElement)) {
+      const first = el.querySelector<HTMLElement>('[data-autofocus]')
+      ;(first ?? el).focus()
+    }
+    // Focus goes back to what opened the sheet, if it is still on the page.
+    return () => {
+      if (opener?.isConnected) opener.focus()
+    }
   }, [])
+
+  // A dialog keeps Tab inside itself. A drawer lets focus leave, because the list stays usable.
+  useEffect(() => {
+    if (variant !== 'dialog') return
+    const onKey = (e: KeyboardEvent) => {
+      const el = ref.current
+      if (e.key !== 'Tab' || !el) return
+      const focusables = [
+        ...el.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((f) => !f.hasAttribute('disabled'))
+      const first = focusables[0]
+      const last = focusables.at(-1)
+      if (!first || !last) return
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === el)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [variant])
 
   return (
     <>

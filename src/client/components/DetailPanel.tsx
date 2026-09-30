@@ -1,4 +1,11 @@
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { formatDateTime, instantIn, localParts, relative, zoneName } from '../../core/deadline'
 import { type CandidateDraft, candidateFromDraft, draftFromCandidate } from '../../core/draft'
 import { normalizeUrl, shortUrl } from '../../core/links'
@@ -108,18 +115,45 @@ export function DetailPanel({
   )
 }
 
+/**
+ * A toolbar of buttons, one per stage. Arrow keys move focus only. A stage changes only when
+ * she presses a button, so no key press can reach Advanced or Passed by accident (D9).
+ */
 function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) => void }) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const [focused, setFocused] = useState(() => STAGES.indexOf(stage))
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const moves: Record<string, number> = {
+      ArrowRight: focused + 1,
+      ArrowDown: focused + 1,
+      ArrowLeft: focused - 1,
+      ArrowUp: focused - 1,
+      Home: 0,
+      End: STAGES.length - 1,
+    }
+    const target = moves[e.key]
+    if (target === undefined) return
+    e.preventDefault()
+    const next = (target + STAGES.length) % STAGES.length
+    setFocused(next)
+    refs.current[next]?.focus()
+  }
+
   return (
-    <div className="seg" role="radiogroup" aria-label="Stage">
-      {STAGES.map((s) => (
-        // biome-ignore lint/a11y/useSemanticElements: a segmented control of buttons
+    <div className="seg" role="toolbar" aria-label="Stage" onKeyDown={onKeyDown}>
+      {STAGES.map((s, i) => (
         <button
           key={s}
+          ref={(el) => {
+            refs.current[i] = el
+          }}
           type="button"
-          role="radio"
-          aria-checked={s === stage}
+          aria-pressed={s === stage}
+          tabIndex={i === focused ? 0 : -1}
           className="seg-item"
           data-stage={s}
+          onFocus={() => setFocused(i)}
           onClick={() => onChange(s)}
         >
           {STAGE_LABELS[s]}

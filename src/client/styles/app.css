@@ -549,7 +549,8 @@
   white-space: nowrap;
 }
 
-.seg-item[aria-checked="true"] {
+.seg-item[aria-checked="true"],
+.seg-item[aria-pressed="true"] {
   background: var(--surface);
   box-shadow: var(--shadow-card);
   color: var(--ink);

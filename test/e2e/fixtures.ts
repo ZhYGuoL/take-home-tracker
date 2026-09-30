@@ -34,6 +34,6 @@ export async function addCandidate(page: Page, c: NewCandidate) {
   return page.getByRole('dialog', { name: c.name })
 }
 
-export function stageRadio(page: Page, name: string) {
-  return page.getByRole('radiogroup', { name: 'Stage' }).getByRole('radio', { name, exact: true })
+export function stageButton(page: Page, name: string) {
+  return page.getByRole('toolbar', { name: 'Stage' }).getByRole('button', { name, exact: true })
 }
