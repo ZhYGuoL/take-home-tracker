@@ -25,3 +25,4 @@ eval/results/*.local.json
 .vscode/
 .idea/
 *.log
+dist-*/
