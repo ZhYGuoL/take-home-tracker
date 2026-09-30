@@ -61,6 +61,13 @@
   min-width: 0;
 }
 
+/* A link cuts off with an ellipsis only as a box. */
+a.truncate {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+
 .handle {
   font-size: 11px;
   color: var(--ink-3);
@@ -281,6 +288,12 @@
   gap: 12px;
   min-width: 0;
   min-height: 24px;
+}
+
+/* "due in 1d 7h" stays on one line. The role before it gives way instead. */
+.list-line > .num {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* Empty state */
@@ -540,7 +553,8 @@
 
 .seg {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Each stage as wide as its name, plus an equal share of the rest, so all five fit at 320px. */
+  grid-template-columns: repeat(5, auto);
   gap: 2px;
   height: 36px;
   padding: 4px;
@@ -555,6 +569,7 @@
   align-items: center;
   justify-content: center;
   height: 28px;
+  padding: 0 4px;
   border-radius: var(--radius-inner);
   font-size: 12px;
   font-weight: 500;
@@ -578,6 +593,13 @@
 
 .seg-item:focus-visible {
   box-shadow: var(--focus-ring);
+}
+
+/* The narrowest phones: the five stage names still fit, with room to spare. */
+@media (max-width: 359px) {
+  .seg-item {
+    font-size: 11px;
+  }
 }
 
 .facts {

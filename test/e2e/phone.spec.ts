@@ -42,8 +42,20 @@ test('no screen scrolls sideways at phone width', async ({ page }, info) => {
     await page.getByRole('button', { name: /^Stage/ }).click()
     await noSideScroll(page)
     await page.keyboard.press('Escape')
+    // The due time stays on one line.
+    const due = page.locator('li.list-item .list-line > .num').first()
+    expect((await due.boundingBox())?.height ?? 99).toBeLessThanOrEqual(18)
     await page.getByRole('button', { name: 'Alexandra Montgomery-Okonkwo' }).click()
     await noSideScroll(page)
+    // Every stage name fits in its button.
+    const crowded = await page
+      .getByRole('toolbar', { name: 'Stage' })
+      .evaluate(
+        (el) =>
+          el.scrollWidth > el.clientWidth ||
+          [...el.children].some((c) => c.scrollWidth > c.clientWidth),
+      )
+    expect(crowded).toBe(false)
     await page.getByRole('button', { name: 'Close' }).click()
     await page.getByRole('button', { name: 'Add', exact: true }).first().click()
     await noSideScroll(page)
