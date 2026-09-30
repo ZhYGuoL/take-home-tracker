@@ -16,7 +16,8 @@ She can change any field before she saves.
 
 - `f1-01-add-paste-1440.png`: Add opens on Paste.
 - `f1-02-paste-proposes-new-1440.png`: the proposal for "Theo Marsh", with his email as the contact.
-- `f1-03-saved-detail-1440.png`: after Save, the candidate is Submitted, with the submission and repo links and the message time from the email.
+- `f1-03-paste-message-and-correction-1440.png`: further down, the message time and the two links with their kinds. She changed the role before this shot.
+- `f1-04-saved-detail-1440.png`: after Save, the candidate is Submitted, with the corrected role, the links, and the message time from the email.
 - Tests: `test/e2e/paste.spec.ts`, `src/core/paste.test.ts`, `src/core/extract/*.test.ts`.
 
 ## F2. A second paste attaches
@@ -49,6 +50,7 @@ A chat from "Priya Raman" matches the candidate with that full name.
 - `f6-01-stage-filter-counts-1440.png`: each option shows how many candidates it would show.
 - `f6-02-stage-and-flag-1440.png`: Stage and Flag together. Each active filter takes the color of what it filters.
 - `f6-03-no-match-ways-back-1440.png`: when nothing matches, each way back shows how many candidates it would bring back.
+- `f6-04-role-filter-1440.png` and `f6-05-date-filter-1440.png`: the Role and Date filters.
 - Tests: `src/core/filters.test.ts`, `test/e2e/filters.spec.ts`, and `test/e2e/filters-combined.spec.ts`.
 
 ## F7. Phone width
@@ -62,13 +64,15 @@ A chat from "Priya Raman" matches the candidate with that full name.
 
 ## F8. Signed out, and one user per Sheet
 
-- `f8-01-signed-out-1440.png` and `f8-03-signed-out-390.png`: a signed-out visitor sees only "Continue with Google".
+- `f8-01-signed-out-1440.png` and `f8-04-signed-out-390.png`: a signed-out visitor sees only "Continue with Google".
 - `f8-02-google-chooser-1440.png`: the local fake Google account chooser. `pnpm dev` uses it, and the production build cannot contain it (D5).
+- `f8-03-other-person-empty-1440.png`: a second person signs in on the same browser and sees an empty list of their own.
 - Tests: `test/e2e/signin.spec.ts` (the API gives a signed-out visitor nothing, and one user never sees another on the same browser), `test/e2e/sync.spec.ts`, `src/worker/auth.test.ts`, and `src/worker/app.test.ts`.
 
 ## F9. By hand, with the model off
 
 - `f9-01-by-hand-1440.png`: the manual form. The model is off in this run, because there is no key (B2).
+- `f9-02-by-hand-saved-1440.png`: the candidate saved by hand, with a 48-hour deadline.
 - Tests: `test/e2e/candidates.spec.ts` ("with the model off, adding and advancing a candidate by hand works end to end").
 
 ## Sync
@@ -82,5 +86,6 @@ A chat from "Priya Raman" matches the candidate with that full name.
 1. Open Aside Browser.
 2. Run `docs/qa/aside/up.sh`. It starts the fake Google and the app, and adds the demo candidates.
 3. Run each script: `aside repl "$(cat docs/qa/aside/lib.js docs/qa/aside/desktop-1.js)"`, then `desktop-2.js`, then `phone.js`.
-   Run `up.sh` again before `phone.js`, because `desktop-2.js` leaves a save that Google refused.
+   Run `up.sh` again before `phone.js`, because `desktop-2.js` changes the demo data and makes the fake Google refuse saves.
+   `desktop-2.js` ends with a sign-out, so the browser keeps nothing for the next run.
 4. Run `docs/qa/aside/pull.sh`. It moves the new screenshots into this folder.

@@ -28,7 +28,7 @@ try {
   await phone(p);
   await tap(p, /button "Sign out"/);
   await sleep(1500);
-  await shot(p, 'f8-03-signed-out-390');
+  await shot(p, 'f8-04-signed-out-390');
 } finally {
   await closeTab(p);
 }

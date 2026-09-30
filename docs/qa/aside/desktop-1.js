@@ -8,6 +8,14 @@ try {
   await tap(p, /link "Continue with Google"/);
   await sleep(800);
   await shot(p, 'f8-02-google-chooser-1440');
+  // Another person on the same browser gets an empty list of their own.
+  await tap(p, /link "Blake Rivera"/);
+  await sleep(2500);
+  await shot(p, 'f8-03-other-person-empty-1440');
+  await tap(p, /button "Sign out"/);
+  await sleep(1500);
+  await tap(p, /link "Continue with Google"/);
+  await sleep(800);
   await tap(p, /link "Avery Stone"/);
   await sleep(2500);
   await shot(p, 'f5-01-needs-you-1440');
@@ -28,6 +36,14 @@ try {
   await shot(p, 'f6-03-no-match-ways-back-1440');
   await tap(p, /button "Clear every filter/);
   await tap(p, /radio "All/);
+  await tap(p, /button "Role"/);
+  await shot(p, 'f6-04-role-filter-1440');
+  await p.keyboard.press('Escape');
+  await sleep(200);
+  await tap(p, /button "Date"/);
+  await shot(p, 'f6-05-date-filter-1440');
+  await p.keyboard.press('Escape');
+  await sleep(200);
   await tap(p, /button "Mei Tanaka"/);
   await shot(p, 'f4-02-late-detail-1440');
   await tap(p, /button "Close"/);

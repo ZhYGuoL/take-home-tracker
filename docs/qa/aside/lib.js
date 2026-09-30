@@ -32,3 +32,14 @@ async function signedIn(p) {
     await sleep(2500);
   }
 }
+async function tapLast(p, re) {
+  const lines = (await snapshot(p)).tree.split('\n').filter((l) => re.test(l));
+  const m = lines.at(-1)?.match(/\[ref=(e\d+)\]/);
+  if (!m) throw new Error('no ref for ' + re);
+  await p.locator(m[1]).click();
+  await sleep(350);
+}
+async function fillField(p, re, text) {
+  await p.locator(await refOf(p, re)).fill(text);
+  await sleep(150);
+}

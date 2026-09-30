@@ -24,13 +24,25 @@ try {
   await tap(p, /button "Read"/);
   await sleep(400);
   await shot(p, 'f1-02-paste-proposes-new-1440');
+  // She corrects the role, and checks the message part further down.
+  await fillField(p, /textbox "Role"/, 'Founding full-stack engineer');
+  await p.evaluate(() => { const b = document.querySelector('.form-body'); if (b) b.scrollTop = b.scrollHeight; });
+  await sleep(300);
+  await shot(p, 'f1-03-paste-message-and-correction-1440');
   await tap(p, /button "Save"/);
   await sleep(900);
-  await shot(p, 'f1-03-saved-detail-1440');
+  await shot(p, 'f1-04-saved-detail-1440');
   await tap(p, /button "Close"/);
   await tap(p, /button "Add"/);
   await tap(p, /radio "By hand"/);
   await shot(p, 'f9-01-by-hand-1440');
+  await fillField(p, /textbox "Name"/, 'Rowan Okafor');
+  await fillField(p, /textbox "Role"/, 'Founding engineer');
+  await fillField(p, /textbox "Contact"/, 'rowan.okafor@example.com');
+  await tap(p, /button "48h"/);
+  await tapLast(p, /button "Add"/);
+  await sleep(900);
+  await shot(p, 'f9-02-by-hand-saved-1440');
   await tap(p, /button "Close"/);
   // Google fails: the save stays on this device, and the header says so, with the panel open.
   await tap(p, /radio "All/);
@@ -44,6 +56,11 @@ try {
   await sleep(800);
   await shot(p, 'sync-02-sign-out-asks-1440');
   await tap(p, /button "Stay signed in"/);
+  // Leave the browser clean for the next run: sign out, and let the refused save go.
+  await tap(p, /button "Sign out"/);
+  await sleep(800);
+  await tap(p, /button "Sign out and lose/);
+  await sleep(1500);
 } finally {
   await closeTab(p);
 }
