@@ -25,3 +25,17 @@
 - Reviewer findings fixed: the save queue, deleted data that stayed behind, the +1 phone bug, notes lost on close, two closes after switching rows, presets and zone changes, no way to fix a wrong entry, the link form on a phone, zone label cost, focus in the dialog, stage keys, pink used for errors, rows that jumped, a deadline that moved on edit in a repeated hour, and a silent failure on a cleared time.
 - Evidence: `pnpm verify` exit 0 (88 unit tests, 29 e2e tests on desktop Chromium and iPhone WebKit, 3 skipped as desktop-only).
 - No `features.json` item flips yet. F3 waits for the paste and model paths (M3, M4).
+
+## M2 Deadlines and attention - done
+
+- Flags: Overdue (deadline passed and the stage is still Sent), Late (first submission after the deadline), Needs reply (the latest message is an inbound one that asks something, with no reply after it).
+- Overdue turns on 1 ms after the deadline instant, not on the next 30-second tick. It also updates at once after a deadline edit or a return to the tab.
+- "Needs you" is the default view: Submitted, Needs reply, or Overdue, most urgent first.
+- Filters by stage, flag, role (including no role), source, date range on four date fields, and text. Each option shows its count. Filters live in the URL. An empty result offers each loosening with the rows it brings back.
+- Reviewer findings fixed: Overdue ignored a stage set by hand, same-minute entries sorted at random, Replied could sort before a future-dated question, a bad escape in the URL blanked the page, flags squeezed the name column, popover focus and phone tap-through, an empty date filter, off-by-one presets, empty-state labels, reply sort order, and a pressed color too close to Needs reply blue.
+- Evidence:
+  - F4: `src/core/flags.test.ts` (exactly at the deadline, one millisecond after, date-only, zones) and `test/e2e/attention.spec.ts` (paused clock at the deadline instant, then +1 ms; viewers in Los Angeles and Tokyo).
+  - F5: `src/core/flags.test.ts` needsYou table and `test/e2e/attention.spec.ts` "shows exactly overdue, needs reply, and submitted".
+  - F6: `src/core/filters.test.ts` and `test/e2e/filters.spec.ts`, `test/e2e/filters-combined.spec.ts` (each filter alone, and leave-one-out with one decoy per dimension).
+  - `pnpm verify` exit 0: 193 unit tests, 100 e2e tests, 4 skipped as desktop-only.
+- F4, F5, and F6 pass.

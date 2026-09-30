@@ -17,17 +17,17 @@
   {
     "id": "F4",
     "description": "Overdue and Late are correct, including exactly at the deadline and across time zones.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F5",
     "description": "\"Needs you\" shows exactly the right set.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F6",
     "description": "All filters work alone and combined.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F7",
