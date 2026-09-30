@@ -28,12 +28,27 @@ const ZONES: Record<string, string> = {
   bst: 'Europe/London',
   cet: 'Europe/Berlin',
   cest: 'Europe/Berlin',
+  wet: 'Europe/Lisbon',
+  west: 'Europe/Lisbon',
+  eet: 'Europe/Athens',
+  eest: 'Europe/Athens',
+  // IST also names Israel and Irish time. India is the common one in candidate messages.
+  ist: 'Asia/Kolkata',
+  sgt: 'Asia/Singapore',
+  hkt: 'Asia/Hong_Kong',
+  jst: 'Asia/Tokyo',
+  kst: 'Asia/Seoul',
+  aest: 'Australia/Sydney',
+  aedt: 'Australia/Sydney',
+  nzst: 'Pacific/Auckland',
+  nzdt: 'Pacific/Auckland',
+  brt: 'America/Sao_Paulo',
 }
 
 export const zoneFor = (word: string | undefined): string | null =>
   word ? (ZONES[word.toLowerCase().replace(/\s*time$/, '')] ?? null) : null
 
-const ZONE_RE = String.raw`\b(ET|EST|EDT|CT|CST|CDT|MT|MST|MDT|PT|PST|PDT|UTC|GMT|BST|CET|CEST|(?:eastern|central|mountain|pacific)\s+time)\b`
+const ZONE_RE = String.raw`\b(ET|EST|EDT|CT|CST|CDT|MT|MST|MDT|PT|PST|PDT|UTC|GMT|BST|CET|CEST|WET|WEST|EET|EEST|IST|SGT|HKT|JST|KST|AEST|AEDT|NZST|NZDT|BRT|(?:eastern|central|mountain|pacific)\s+time)\b`
 
 /** The first zone word in a piece of text, such as "5pm ET" or "(Pacific time)". */
 function zoneIn(text: string): string | null {

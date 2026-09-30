@@ -107,3 +107,13 @@ describe('durations', () => {
     expect(parseDeadline('The take-home should take about 2 hours.', NOW, LA)).toBeNull()
   })
 })
+
+describe('zones outside the US', () => {
+  it.each([
+    ['Please send it by Friday 5pm IST.', '2026-10-02T11:30:00.000Z'],
+    ['Please send it by Friday 5pm JST.', '2026-10-02T08:00:00.000Z'],
+    ['Please send it by Friday 5pm AEST.', '2026-10-02T07:00:00.000Z'],
+  ])('%s', (text, iso) => {
+    expect(parseDeadline(text, NOW, LA)?.at).toBe(iso)
+  })
+})
