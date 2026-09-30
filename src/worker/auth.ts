@@ -186,7 +186,9 @@ export function authRoutes(app: Hono<{ Bindings: Env }>, deps: AuthDeps) {
     if (!cfg) return signedOut(false)
     let s = await readSession(c, cfg)
     if (!s) return signedOut(true)
-    if (s.atExp - Date.now() < REFRESH_EARLY_MS) {
+    // "?refresh=1" comes after Google refused the current token, for example after a sign-out
+    // on another device ended the grant. A fresh token, or a sign-out, is the only way on.
+    if (c.req.query('refresh') === '1' || s.atExp - Date.now() < REFRESH_EARLY_MS) {
       const res = await postForm(deps, cfg.endpoints.token, {
         grant_type: 'refresh_token',
         refresh_token: s.rt,

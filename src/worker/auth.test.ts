@@ -161,6 +161,15 @@ describe('the session', () => {
     }
   })
 
+  it('refreshes at once when the browser asks, after Google refused the current token', async () => {
+    const g = fakeGoogle()
+    const { cookie } = await signIn(g)
+    const res = await g.app.request('https://tracker.test/api/session?refresh=1', {
+      headers: { cookie },
+    })
+    expect(((await res.json()) as { accessToken: string }).accessToken).toBe('at-2')
+  })
+
   it('signs her out when Google no longer accepts the grant', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     try {

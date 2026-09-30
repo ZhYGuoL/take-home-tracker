@@ -102,3 +102,57 @@ test.describe('signed in', () => {
     await phone.context().close()
   })
 })
+
+test.describe('when Google stops taking her tokens', () => {
+  const records = async (page: Page) =>
+    JSON.stringify((await sheets(page)).find((s) => s.owner === 'fake-blake')?.tabs.records)
+
+  test('a refused access token is replaced, and her saves keep reaching the Sheet', async ({
+    page,
+  }) => {
+    await signInAs(page, 'blake')
+    await page.request.post(`${FAKE_GOOGLE_URL}/__drop-access`, { data: { sub: 'fake-blake' } })
+    await addByHand(page, 'Tess Okonkwo')
+    await expect.poll(() => records(page)).toContain('Tess Okonkwo')
+    await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
+  })
+
+  test('after she removes the app at Google, she goes to sign-in, and an unsent save survives', async ({
+    page,
+  }) => {
+    await signInAs(page, 'blake')
+    await expect.poll(async () => (await sheets(page)).length).toBe(1)
+    // Google cannot be reached while she adds someone, so the save waits on this device.
+    await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())
+    await page.getByRole('button', { name: 'Add', exact: true }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+    await dialog.getByRole('radio', { name: 'By hand' }).click()
+    await dialog.getByLabel('Name', { exact: true }).fill('Uma Lindgren')
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click()
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toBeVisible()
+    await page.request.post(`${FAKE_GOOGLE_URL}/__revoke-grant`, { data: { sub: 'fake-blake' } })
+    await page.unroute(`${FAKE_GOOGLE_URL}/**`)
+    await page.getByRole('button', { name: 'Retry' }).click()
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+    await signInAs(page, 'blake')
+    await expect.poll(() => records(page)).toContain('Uma Lindgren')
+  })
+
+  test('signing out on one device sends her other device to sign-in at its next save', async ({
+    browser,
+    page,
+  }) => {
+    await signInAs(page, 'blake')
+    const phone = await (await browser.newContext()).newPage()
+    await signInAs(phone, 'blake')
+    await signOut(page)
+    await phone.getByRole('button', { name: 'Add', exact: true }).first().click()
+    const dialog = phone.getByRole('dialog', { name: 'Add candidate' })
+    await dialog.getByRole('radio', { name: 'By hand' }).click()
+    await dialog.getByLabel('Name', { exact: true }).fill('Vic Moreau')
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(phone.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+    await phone.context().close()
+  })
+})

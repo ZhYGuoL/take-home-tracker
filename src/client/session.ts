@@ -3,8 +3,14 @@ import type { GoogleAccess } from './sync/sheets'
 
 export type Session = Extract<SessionResponse, { signedIn: true }>
 
-export async function fetchSession(fetcher: typeof fetch = fetch): Promise<SessionResponse> {
-  const res = await fetcher('/api/session', { credentials: 'same-origin' })
+/** The session. With `refresh`, the Worker gets a new Google token even if the old one is young. */
+export async function fetchSession(
+  fetcher: typeof fetch = fetch,
+  refresh = false,
+): Promise<SessionResponse> {
+  const res = await fetcher(refresh ? '/api/session?refresh=1' : '/api/session', {
+    credentials: 'same-origin',
+  })
   if (res.status === 401) return (await res.json()) as SessionResponse
   if (!res.ok) throw new Error(`session ${res.status}`)
   return (await res.json()) as SessionResponse
@@ -21,7 +27,7 @@ export function googleAccess(first: Session, fetcher: typeof fetch = fetch): Goo
     drive: first.google.drive,
     async token(fresh = false) {
       if (fresh || current.expiresAt - Date.now() < 60_000) {
-        const next = await fetchSession(fetcher)
+        const next = await fetchSession(fetcher, fresh)
         if (!next.signedIn) {
           // She was signed out elsewhere, or Google ended the grant. Start over at sign-in.
           window.location.assign('/')

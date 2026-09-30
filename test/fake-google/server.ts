@@ -38,6 +38,12 @@ const state = {
 
 const token = (prefix: string) => `${prefix}-${randomBytes(12).toString('hex')}`
 
+/** Google stops taking this person's access tokens, and with `grant` her refresh tokens too. */
+function forget(sub: string, grant: boolean) {
+  for (const [t, a] of state.access) if (a.person.sub === sub) state.access.delete(t)
+  if (grant) for (const [t, p] of state.refresh) if (p.sub === sub) state.refresh.delete(t)
+}
+
 function send(res: ServerResponse, status: number, body: unknown, origin?: string) {
   res.writeHead(status, {
     'content-type': typeof body === 'string' ? 'text/html; charset=utf-8' : 'application/json',
@@ -157,6 +163,16 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     sheet.tabs.set('records', [['id', 'type', 'updated_at', 'deleted', 'data'], ...body.rows])
     return send(res, 200, { id: sheet.id }, origin)
   }
+  // She removed the app from her Google account: every token of hers stops working.
+  if (path === '/__revoke-grant' && req.method === 'POST') {
+    forget((JSON.parse(await readBody(req)) as { sub: string }).sub, true)
+    return send(res, 200, { ok: true }, origin)
+  }
+  // Google stops taking her access tokens early. Her refresh token still works.
+  if (path === '/__drop-access' && req.method === 'POST') {
+    forget((JSON.parse(await readBody(req)) as { sub: string }).sub, false)
+    return send(res, 200, { ok: true }, origin)
+  }
   if (path === '/__fail' && req.method === 'POST') {
     const body = JSON.parse(await readBody(req)) as {
       prefix: string
@@ -229,7 +245,9 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
   if (path === '/revoke' && req.method === 'POST') {
     const t = url.searchParams.get('token') ?? new URLSearchParams(await readBody(req)).get('token')
-    if (t) state.refresh.delete(t)
+    // Like Google, revoking one token ends the whole grant, on every device.
+    const person = t ? (state.refresh.get(t) ?? state.access.get(t)?.person) : undefined
+    if (person) forget(person.sub, true)
     return send(res, 200, {})
   }
 
