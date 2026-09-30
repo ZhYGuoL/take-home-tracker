@@ -9,6 +9,9 @@ async function noSideScroll(page: Page) {
   expect(overflow).toBeLessThanOrEqual(0)
 }
 
+// iPhone 15, the small iPhones, and the narrowest phones still in use.
+const WIDTHS = [393, 375, 320]
+
 test('no screen scrolls sideways at phone width', async ({ page }, info) => {
   test.skip(info.project.name !== 'iphone', 'phone width only')
   const a = person('Alexandra Montgomery-Okonkwo', {
@@ -29,24 +32,44 @@ test('no screen scrolls sideways at phone width', async ({ page }, info) => {
       'https://a-very-long-subdomain-for-a-deployed-app-example.vercel.app',
     ),
   ])
-  await noSideScroll(page)
-  await page.getByRole('radio', { name: /All/ }).click()
-  await noSideScroll(page)
-  await page.getByRole('button', { name: /^Stage/ }).click()
-  await noSideScroll(page)
-  await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Alexandra Montgomery-Okonkwo' }).click()
-  await noSideScroll(page)
-  await page.getByRole('button', { name: 'Close' }).click()
-  await page.getByRole('button', { name: 'Add', exact: true }).first().click()
-  await noSideScroll(page)
-  await page
-    .getByLabel('Message')
-    .fill(
-      'From: Alexandra Montgomery-Okonkwo <alexandra.montgomery-okonkwo@example.com>\nDate: Wed, Sep 30, 2026 at 11:42 AM\n\nhttps://a-very-long-subdomain-for-a-deployed-app-example.vercel.app',
-    )
-  await page.getByRole('button', { name: 'Read' }).click()
-  await noSideScroll(page)
-  await page.getByRole('radio', { name: 'By hand' }).click()
-  await noSideScroll(page)
+  for (const width of WIDTHS) {
+    await page.setViewportSize({ width, height: 700 })
+    await page.goto('/')
+    await noSideScroll(page)
+    await expect(page.getByRole('button', { name: 'Add', exact: true }).first()).toBeInViewport()
+    await page.getByRole('radio', { name: /All/ }).click()
+    await noSideScroll(page)
+    await page.getByRole('button', { name: /^Stage/ }).click()
+    await noSideScroll(page)
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Alexandra Montgomery-Okonkwo' }).click()
+    await noSideScroll(page)
+    await page.getByRole('button', { name: 'Close' }).click()
+    await page.getByRole('button', { name: 'Add', exact: true }).first().click()
+    await noSideScroll(page)
+    await page
+      .getByLabel('Message')
+      .fill(
+        'From: Alexandra Montgomery-Okonkwo <alexandra.montgomery-okonkwo@example.com>\nDate: Wed, Sep 30, 2026 at 11:42 AM\n\nhttps://a-very-long-subdomain-for-a-deployed-app-example.vercel.app',
+      )
+    await page.getByRole('button', { name: 'Read' }).click()
+    await noSideScroll(page)
+    await page.getByRole('radio', { name: 'By hand' }).click()
+    await noSideScroll(page)
+  }
+})
+
+test.describe('signed out', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('the sign-in screen fits every phone width', async ({ page }, info) => {
+    test.skip(info.project.name !== 'iphone', 'phone width only')
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 700 })
+      await page.goto('/?signin=drive')
+      await noSideScroll(page)
+      await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeInViewport()
+      await expect(page.getByRole('alert')).toBeInViewport()
+    }
+  })
 })
