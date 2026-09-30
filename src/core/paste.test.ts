@@ -116,6 +116,17 @@ describe('a second paste from the same candidate', () => {
   })
 })
 
+describe('a first name alone', () => {
+  it('does not attach, because another person can share it', () => {
+    const sam = candidate({ id: 'c-sam', name: 'Samantha Patel' })
+    const known: KnownCandidate[] = [
+      { id: sam.id, name: sam.name, role: '', contacts: [], links: [] },
+    ]
+    const d = read(`hey it's Sam - here's my submission https://sam-app.vercel.app`, known)
+    expect(d.target).toBe('new')
+  })
+})
+
 describe('limits', () => {
   it('keeps at most 20,000 characters of a paste', () => {
     expect(read('x'.repeat(30_000)).text).toHaveLength(20_000)

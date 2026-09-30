@@ -40,7 +40,8 @@ export function pasteDraft(
   const doc = p.links.find((l) => l.kind === 'doc')
   const outbound = p.direction === 'out'
   return {
-    target: p.match?.id ?? 'new',
+    // A first name alone is not enough to attach. It stays first in her list instead.
+    target: p.match?.strength === 'strong' ? p.match.id : 'new',
     candidate: {
       ...emptyDraft(zone, now),
       name: p.name ?? '',
