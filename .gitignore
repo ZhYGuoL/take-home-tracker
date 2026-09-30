@@ -29,3 +29,6 @@ dist-e2e/
 
 # the brief quotes private messages (D11)
 BRIEF.md
+
+# local scratch scripts
+*.tmp.*

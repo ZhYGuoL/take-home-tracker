@@ -1,3 +1,12 @@
 #!/bin/sh
 # The fast check must pass before every commit.
-exec pnpm -s check
+# It runs on the staged snapshot, so every commit passes on its own.
+set -e
+root=$(git rev-parse --show-toplevel)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+git checkout-index -a --prefix="$tmp/"
+ln -s "$root/node_modules" "$tmp/node_modules"
+cd "$tmp"
+git init -q && git add -A >/dev/null 2>&1
+pnpm -s check
