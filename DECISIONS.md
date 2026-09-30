@@ -119,6 +119,12 @@ The Drive API has no conditional update, so two devices that save at the same ti
 - The browser gets a short-lived access token from `/api/session` and calls the Sheets API directly.
   Candidate data does not go through the Worker.
 
+- Sign-out clears the cookie and revokes the refresh token at Google.
+  The server keeps no list of sessions, so revoking at Google is the only way to end a copied cookie.
+- The Google consent screen must be in "In production" status.
+  In "Testing" status, only listed test users can sign in, and refresh tokens expire after 7 days.
+  With only non-sensitive scopes, Google does not require verification to publish.
+
 **Reason.** No new password, and v2 needs the same Google account for Calendar.
 A refresh token keeps her signed in on her phone for months.
 
