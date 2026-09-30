@@ -39,12 +39,16 @@ OpenRouter needs prepaid credits, which needs a card, so this needs your OK.
 2. In Settings, then Privacy, make sure "Enable training and logging" is off for your account.
 3. Put the key in `take-home-tracker/.env` as `OPENROUTER_API_KEY=...`.
 4. Run `pnpm eval --set blind --jev`.
-5. Apply the rule in D17 to the table it prints. If a model wins, run:
+5. Apply the rule in D17 to the table it prints.
+6. If a model wins, and after B4, set three secrets on the deployed Worker:
    ```
-   npx wrangler secret put OPENROUTER_API_KEY
-   npx wrangler secret put MODEL_ID
+   npx wrangler secret put OPENROUTER_API_KEY --name take-home-tracker
+   npx wrangler secret put MODEL_ID --name take-home-tracker
+   npx wrangler secret put MODEL_ALLOWED_EMAILS --name take-home-tracker
    ```
-   and set `MODEL_ALLOWED_EMAILS` to the recruiter's Google email in `wrangler.jsonc` (see B4).
+   For `MODEL_ID`, paste the winning model id.
+   For `MODEL_ALLOWED_EMAILS`, paste the recruiter's Google email.
+   It is a secret, so her email never goes into the public repo.
 
 ## B3. A Google OAuth client, so real sign-in works
 
@@ -64,9 +68,9 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
    With only these scopes, Google does not ask for verification.
    In "Testing" status, only listed test users can sign in, and every sign-in ends after 7 days.
 5. In Clients, create an OAuth client of type "Web application".
-   Add these authorized redirect URIs:
-   - `https://take-home-tracker.<your-subdomain>.workers.dev/auth/google/callback` (from B4, step 3)
-   - `http://localhost:5173/auth/google/callback` (only to try real Google locally)
+   For now, add only this authorized redirect URI, to try real Google locally:
+   `http://localhost:5173/auth/google/callback`.
+   B4 adds the web address after the first deploy, because it does not exist before.
 6. Keep the client ID and secret for B4, step 4.
 
 ## B4. Deploy a copy (needs B3)
@@ -81,15 +85,20 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
 3. Run `pnpm run deploy`. It builds, checks the production bundle (D5), and prints the `workers.dev` address.
 4. Set the three secrets. Run each command and paste the value when asked:
    ```
-   npx wrangler secret put GOOGLE_CLIENT_ID
-   npx wrangler secret put GOOGLE_CLIENT_SECRET
-   npx wrangler secret put SESSION_SECRET
+   npx wrangler secret put GOOGLE_CLIENT_ID --name take-home-tracker
+   npx wrangler secret put GOOGLE_CLIENT_SECRET --name take-home-tracker
+   npx wrangler secret put SESSION_SECRET --name take-home-tracker
    ```
    For `SESSION_SECRET`, paste the output of `openssl rand -base64 48`.
-5. Open the address, sign in with your own Google account, and add a test candidate.
+   Always give `--name take-home-tracker`.
+   Without it, wrangler can pick the test Worker that `pnpm e2e` configures.
+5. At console.cloud.google.com, open the OAuth client from B3.
+   Add the authorized redirect URI `https://<the address from step 3>/auth/google/callback`, and save.
+6. Open the address, sign in with your own Google account, and add a test candidate.
    Check that a Sheet named "Take-home tracker" appears in your Google Drive.
-6. Send the address to the recruiter yourself. The run never contacts her.
-7. Optional, only after B2: set `MODEL_ALLOWED_EMAILS` in `wrangler.jsonc` to her Google email, put `OPENROUTER_API_KEY` and `MODEL_ID` as secrets, and run `pnpm run deploy` again.
+7. Send the address to the recruiter yourself. The run never contacts her.
+8. Optional, only after B2: set the three model secrets in B2, step 6.
+   The secrets take effect at once, with no new deploy.
 
 ## B5. A public GitHub repo (after B1)
 

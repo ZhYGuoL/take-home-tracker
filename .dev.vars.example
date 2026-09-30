@@ -2,3 +2,5 @@
 # All of these are optional. Without them, the app runs with the model off.
 OPENROUTER_API_KEY=
 MODEL_ID=
+# Comma-separated Google emails that may use the model, for example avery@example.com.
+MODEL_ALLOWED_EMAILS=

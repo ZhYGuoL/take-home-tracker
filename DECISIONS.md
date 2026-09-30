@@ -296,6 +296,7 @@ The skill is an extracted snapshot of another site.
 **Choice.** Three limits on model spend.
 - `/api/extract` requires a signed-in session.
 - It also requires the user's email to be in `MODEL_ALLOWED_EMAILS`.
+  It is a Worker secret, not a var in `wrangler.jsonc`, so no real email is in the public repo.
   If the list is empty, the model is off for everyone, and the rules proposal is used.
   Other users of the same instance still get the full app without the model.
 - The OpenRouter key has a monthly credit limit, which the operator sets in OpenRouter.

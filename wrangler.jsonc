@@ -13,9 +13,7 @@
   "ratelimits": [
     { "name": "MODEL_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }
   ],
-  "vars": {
-    // Comma-separated Google emails that may use the model. Empty keeps it off for everyone (D13).
-    "MODEL_ALLOWED_EMAILS": ""
-  },
+  // MODEL_ALLOWED_EMAILS is a secret, not a var, so no real email is in this public file.
+  // It lists the Google emails that may use the model. Unset keeps it off for everyone (D13).
   "observability": { "enabled": false }
 }
