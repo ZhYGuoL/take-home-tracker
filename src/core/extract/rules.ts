@@ -465,7 +465,8 @@ export function extractWithRules(paste: string, ctx: ExtractContext): Proposal {
     direction: outbound ? 'out' : 'in',
     messageAt: h.stamp,
     links,
-    deadline: outbound ? parseDeadline(own, ctx.now, ctx.zone) : null,
+    // "48 hours" counts from when she sent the message, which can be before the paste.
+    deadline: outbound ? parseDeadline(own, h.stamp ?? ctx.now, ctx.zone) : null,
     needsReply: !outbound && asksSomething(own),
     match: matchCandidate({ name, contacts, links }, ctx.candidates),
   }

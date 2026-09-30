@@ -198,18 +198,29 @@ const TRIGGER =
  * that day (D8). A zone word in the same paragraph sets the zone.
  */
 export function parseDeadline(text: string, now: string, zone: string): Deadline | null {
-  const duration =
-    /\b(\d{1,3}|an?|one|two|three|four|five|six|seven)\s*(hours?|hrs?|h|days?|weeks?)\b/i.exec(text)
-  if (
-    duration &&
-    /\b(?:have|get|within|take|takes|you'll|you will|window|turnaround)\b/i.test(text)
-  ) {
-    const n = WORD_NUMBERS[duration[1]?.toLowerCase() ?? ''] ?? Number(duration[1])
-    const unit = duration[2]?.toLowerCase() ?? ''
-    if (unit.startsWith('h')) return deadlineAfterHours(now, n, zone)
-    return deadlineAfterDays(now, unit.startsWith('w') ? n * 7 : n, zone)
-  }
+  return explicitDeadline(text, now, zone) ?? durationDeadline(text, now, zone)
+}
 
+/**
+ * "You'll have 48 hours", "within 3 days", "72 hours to finish it". The number must follow a word
+ * that gives her the time, so "should take about 3 hours" or "most people spend 2 days" is not a deadline.
+ */
+function durationDeadline(text: string, now: string, zone: string): Deadline | null {
+  const n = String.raw`(\d{1,3}|an?|one|two|three|four|five|six|seven)\s*(hours?|hrs?|h|days?|weeks?)\b`
+  const m =
+    new RegExp(
+      String.raw`\b(?:have|get|within|allow|give you|giving you|in the next)\s+(?:about\s+|up to\s+|the next\s+)?${n}`,
+      'i',
+    ).exec(text) ??
+    new RegExp(String.raw`\b${n}\s+to\s+(?:finish|complete|submit|do|work on)\b`, 'i').exec(text)
+  if (!m) return null
+  const count = WORD_NUMBERS[m[1]?.toLowerCase() ?? ''] ?? Number(m[1])
+  const unit = m[2]?.toLowerCase() ?? ''
+  if (unit.startsWith('h')) return deadlineAfterHours(now, count, zone)
+  return deadlineAfterDays(now, unit.startsWith('w') ? count * 7 : count, zone)
+}
+
+function explicitDeadline(text: string, now: string, zone: string): Deadline | null {
   // "I will get back to you by Friday" is her promise, not the candidate's deadline.
   const trigger = [...text.matchAll(new RegExp(TRIGGER.source, 'gi'))].find((m) => {
     const sentence =

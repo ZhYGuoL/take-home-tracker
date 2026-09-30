@@ -88,3 +88,22 @@ describe('parseStamp reads more formats', () => {
     expect(parseStamp('3/10/2026, 09:00', NOW, 'Europe/London')).toBe('2026-10-03T08:00:00.000Z')
   })
 })
+
+describe('durations', () => {
+  it.each([
+    ['It should take about 3-4 hours. You will have 48 hours.', '2026-10-02T20:00:00.000Z'],
+    [
+      'Please spend no more than 4 hours, and send it by Friday 5pm ET.',
+      '2026-10-02T21:00:00.000Z',
+    ],
+    ['Most people spend 2 days on it. Due by Oct 9.', '2026-10-10T06:59:59.999Z'],
+    ['You have 72 hours to finish it.', '2026-10-03T20:00:00.000Z'],
+    ['Take the time you need, within 3 days is great.', '2026-10-03T20:00:00.000Z'],
+  ])('%s', (text, iso) => {
+    expect(parseDeadline(text, NOW, LA)?.at).toBe(iso)
+  })
+
+  it('a take-home that "should take 2 hours" sets no deadline', () => {
+    expect(parseDeadline('The take-home should take about 2 hours.', NOW, LA)).toBeNull()
+  })
+})
