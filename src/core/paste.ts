@@ -3,7 +3,7 @@ import { deadlineAt, instantIn, localParts } from './deadline'
 import { type CandidateDraft, candidateFromDraft, emptyDraft } from './draft'
 import type { Proposal } from './extract/types'
 import { normalizeUrl } from './links'
-import type { Candidate, Link, MessageEntry, Source } from './types'
+import type { Applied, Candidate, Link, MessageEntry, Source } from './types'
 
 /** The confirm step after a paste. Every field is what she sees and can change. */
 export interface PasteDraft {
@@ -18,6 +18,8 @@ export interface PasteDraft {
   needsReply: boolean
   /** Exactly what she pasted. It goes on the timeline. */
   text: string
+  /** Every contact the paste shows, kept while she switches the target. */
+  proposedContacts?: string[]
   /** A deadline the paste states. When attaching, it replaces the candidate's deadline. */
   dueDate: string
   dueTime: string
@@ -95,19 +97,33 @@ export function pasteRecords(
     return url ? [{ url, kind: l.kind }] : []
   })
   let candidate: Candidate
+  let applied: Applied | undefined
   if (existing) {
     const doc = links.find((l) => l.kind === 'doc')
+    const contacts = parseContacts(d.candidate.contacts).filter(
+      (c) => !existing.contacts.includes(c),
+    )
+    const takeHomeUrl = !existing.takeHomeUrl && doc ? doc.url : null
+    const deadline = d.dueDate ? deadlineAt(d.dueDate, d.dueTime || null, d.dueZone) : null
+    applied = {
+      contacts,
+      takeHomeUrl,
+      deadline: deadline ? { before: existing.deadline, after: deadline } : null,
+    }
     candidate = {
       ...existing,
-      contacts: [...new Set([...existing.contacts, ...parseContacts(d.candidate.contacts)])],
-      takeHomeUrl: existing.takeHomeUrl || doc?.url || '',
-      deadline: d.dueDate ? deadlineAt(d.dueDate, d.dueTime || null, d.dueZone) : existing.deadline,
+      contacts: [...existing.contacts, ...contacts],
+      takeHomeUrl: takeHomeUrl ?? existing.takeHomeUrl,
+      deadline: deadline ?? existing.deadline,
     }
   } else {
-    candidate = candidateFromDraft(d.candidate, zone, {
-      id: ids.candidate,
-      createdAt: new Date(now).toISOString(),
-    })
+    candidate = {
+      ...candidateFromDraft(d.candidate, zone, {
+        id: ids.candidate,
+        createdAt: new Date(now).toISOString(),
+      }),
+      createdFrom: ids.entry,
+    }
   }
   const at =
     d.messageDate && d.messageTime
@@ -125,6 +141,7 @@ export function pasteRecords(
       source: candidate.source,
       links,
       needsReply: d.direction === 'in' && d.needsReply,
+      ...(applied ? { applied } : {}),
     },
   }
 }

@@ -50,6 +50,8 @@ export interface Candidate {
   takeHomeUrl: string
   notes: string
   createdAt: string
+  /** The pasted message that created this candidate, if a paste did. */
+  createdFrom?: string
 }
 
 export const LINK_KINDS = ['submission', 'repo', 'doc', 'other'] as const
@@ -67,6 +69,13 @@ interface EntryBase {
   at: string
 }
 
+/** What a pasted message added to the candidate it attached to, so a move can take it back. */
+export interface Applied {
+  contacts: string[]
+  takeHomeUrl: string | null
+  deadline: { before: Deadline | null; after: Deadline } | null
+}
+
 export interface MessageEntry extends EntryBase {
   kind: 'message'
   direction: 'in' | 'out'
@@ -74,6 +83,7 @@ export interface MessageEntry extends EntryBase {
   source: Source
   links: Link[]
   needsReply: boolean
+  applied?: Applied
 }
 
 /** A stage that she set with an explicit click. The only way to reach Advanced or Passed (D9). */
