@@ -213,7 +213,7 @@ function nameThenTime(all: string[], first: number, now: string, zone: string): 
   const words = who.toLowerCase().split(/\s+/)
   if (!NAME.test(who) || words.some((w) => NOT_NAMES.has(w) || SUBJECT_WORDS.has(w))) return null
   // A short line that is only a date and a time, not a sentence that mentions one.
-  if (when.length > 32 || /[?!.]$/.test(when) || when.split(/\s+/).length > 6) return null
+  if (when.length > 48 || /[?!.]$/.test(when) || when.split(/\s+/).length > 8) return null
   const stamp = /^\d{1,2}:\d{2}\s*([AP]M)?$/i.test(when)
     ? parseClock(` ${when} `, now, zone)
     : parseStamp(when, now, zone)

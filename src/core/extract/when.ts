@@ -148,6 +148,21 @@ export function parseStamp(text: string, now: string, zone: string): string | nu
       return instantAt(date, clock, zone)
     }
   }
+  // Messages names the weekday for the past week, as in "Friday 9:14 AM". Only a line that is
+  // just that counts, so a plan in a sentence is not read as a time that passed.
+  const weekday = new RegExp(
+    String.raw`^\s*(sun|mon|tue|wed|thu|fri|sat)[a-z]*\.?,?\s*(?:at\s+)?${CLOCK}\s*$`,
+    'i',
+  ).exec(text)
+  if (weekday) {
+    const clock = clockFrom(weekday, 2)
+    const day = WEEKDAYS.indexOf((weekday[1] ?? '').toLowerCase())
+    if (clock && day >= 0) {
+      const today = localParts(now, zone).date
+      const back = (weekdayOf(today) - day + 7) % 7 || 7
+      return instantAt(addDays(today, -back), clock, zone)
+    }
+  }
   return null
 }
 

@@ -18,6 +18,15 @@ describe('parseStamp', () => {
   it('reads 12 AM as midnight', () => {
     expect(parseStamp('Oct 2, 2026 at 12:30 AM', NOW, LA)).toBe('2026-10-02T07:30:00.000Z')
   })
+
+  it('reads a weekday and a time as that day in the past week, as Messages shows it', () => {
+    const now = '2026-09-30T20:00:00.000Z' // Wed 1:00 PM PDT
+    const LA = 'America/Los_Angeles'
+    expect(parseStamp('Friday 9:14 AM', now, LA)).toBe('2026-09-25T16:14:00.000Z')
+    expect(parseStamp('Wednesday 9:14 AM', now, LA)).toBe('2026-09-23T16:14:00.000Z')
+    // Only when the whole line is the stamp, never inside a sentence.
+    expect(parseStamp('see you Friday 9:14 AM', now, LA)).toBeNull()
+  })
 })
 
 describe('parseClock', () => {

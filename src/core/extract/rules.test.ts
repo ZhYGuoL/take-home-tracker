@@ -80,6 +80,14 @@ describe('a name line, then a time line, as a copied chat shows them', () => {
     expect(p.match).toMatchObject({ id: 'c-p', strength: 'strong' })
   })
 
+  it('reads a long time line, with the weekday and month spelled out', () => {
+    const p = extractWithRules(
+      'Priya Raman\nWednesday, September 30, 2026 at 11:42 AM\nall done',
+      ctx(),
+    )
+    expect(p.messageAt).toBe('2026-09-30T18:42:00.000Z')
+  })
+
   it('reads a time line with a date too', () => {
     const p = extractWithRules('Priya Raman\nFri, Sep 25, 9:14 AM\nhey Rae! all done', ctx())
     expect(p.name).toBe('Priya Raman')
