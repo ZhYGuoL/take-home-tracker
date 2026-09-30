@@ -208,7 +208,10 @@ Only the content can tell them apart, so she has the final word.
   These differ by one hour across a daylight-saving change.
 - Late uses the first submission.
   A later fix after the deadline does not make an on-time submission late.
-- Overdue means: the deadline has passed, there is no submission, and the stage is not Advanced or Passed.
+  The first submission is the first inbound submission or repo link, or the first time she sets Submitted or Reviewing by hand.
+  The second case covers work that came in without a link, such as a zip file.
+- Overdue means: the deadline has passed and the stage is still Sent.
+  Once work comes in, by link or by her hand, the candidate is not overdue.
 - The UI shows times in the recruiter's own time zone.
   The detail view also shows the agreed zone.
 
