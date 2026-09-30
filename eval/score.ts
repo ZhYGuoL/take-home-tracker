@@ -13,6 +13,7 @@ export const FIELDS = [
   'deadline',
   'needsReply',
   'match',
+  'suggest',
 ] as const
 export type Field = (typeof FIELDS)[number]
 
@@ -28,15 +29,11 @@ const sameTime = (a: string | null, b: string | null) =>
   a === null || b === null ? a === b : Math.abs(Date.parse(a) - Date.parse(b)) < MINUTE
 
 /**
- * Which fields a case checks. A field the paste does not state is only checked where
- * saying nothing is itself the right answer: no links, no deadline, no match, no reply needed.
+ * Every case checks every field. A field the paste does not state expects nothing, so a
+ * proposal that invents a value is wrong (D14).
  */
-export function checked(e: Expected): Field[] {
-  return FIELDS.filter((f) => {
-    if (f === 'name' || f === 'role' || f === 'source' || f === 'messageAt') return e[f] !== null
-    if (f === 'contacts') return e.contacts.length > 0
-    return true
-  })
+export function checked(_: Expected): Field[] {
+  return [...FIELDS]
 }
 
 export function fieldCorrect(f: Field, e: Expected, p: Proposal): boolean {
@@ -44,7 +41,7 @@ export function fieldCorrect(f: Field, e: Expected, p: Proposal): boolean {
     case 'name':
       return lower(p.name) === lower(e.name)
     case 'contacts':
-      return e.contacts.every((c) => p.contacts.includes(c))
+      return sameSet(p.contacts, e.contacts)
     case 'role':
       return lower(p.role) === lower(e.role)
     case 'source':
@@ -63,6 +60,10 @@ export function fieldCorrect(f: Field, e: Expected, p: Proposal): boolean {
     case 'needsReply':
       return p.needsReply === e.needsReply
     case 'match':
+      // What attaches by default: a strong match. A weak one leaves the target on "New".
+      return (p.match?.strength === 'strong' ? p.match.id : null) === e.match
+    case 'suggest':
+      // The candidate listed first, strong or weak, for information.
       return (p.match?.id ?? null) === e.match
   }
 }

@@ -34,6 +34,19 @@ export const DEFAULT_MODELS = [
 ]
 const JEV = 'jev-1.13'
 
+const EMPTY: Proposal = {
+  name: null,
+  contacts: [],
+  role: null,
+  source: null,
+  direction: 'in',
+  messageAt: null,
+  links: [],
+  deadline: null,
+  needsReply: false,
+  match: null,
+}
+
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`)
   return i >= 0 ? (process.argv[i + 1] ?? fallback) : fallback
@@ -50,7 +63,7 @@ interface Row {
 async function main() {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'pnpm eval [--set blind|dev|dev2] [--models a,b] [--jev] [--limit N]\n' +
+      'pnpm eval [--set blind|dev|dev2] [--models a,b] [--jev] [--limit N] [--no-self]\n' +
         'Without OPENROUTER_API_KEY in .env, only the rules are measured.\n',
     )
     return
@@ -65,11 +78,13 @@ async function main() {
   if (!set) throw new Error(`unknown set ${setName}`)
   const limit = Number(arg('limit', '0')) || set.cases.length
   const cases = set.cases.slice(0, limit)
+  // --no-self reads pastes without knowing who she is, as the app did before sign-in.
+  const self = process.argv.includes('--no-self') ? undefined : set.self
   const ctxFor = (c: Case): ExtractContext => ({
     now: c.pastedAt,
     zone: c.zone,
     candidates: set.roster,
-    self: set.self,
+    self,
   })
   const rules = cases.map((c) => extractWithRules(c.paste, ctxFor(c)))
   const rows: Row[] = [summarize('rules', cases, rules, null, null, 0)]
@@ -80,7 +95,8 @@ async function main() {
     process.stderr.write('OPENROUTER_API_KEY is not set, so only the rules were measured.\n')
   } else {
     for (const model of models) {
-      const call: ModelCall = { model, apiKey: key, fetch, timeoutMs: 30_000 }
+      // The same 12-second limit the app uses.
+      const call: ModelCall = { model, apiKey: key, fetch, timeoutMs: 12_000 }
       const own: Proposal[] = []
       const merged: Proposal[] = []
       let ms = 0
@@ -96,16 +112,17 @@ async function main() {
           ms += out.usage.ms
           cost += out.usage.cost ?? 0
         } catch {
+          // A failed call counts as wrong, so an unreliable model cannot look like the rules.
           errors++
-          own.push(r)
-          merged.push(r)
+          own.push(EMPTY)
+          merged.push(EMPTY)
         }
       }
       rows.push(summarize(`${model}`, cases, own, ms / cases.length, cost, errors))
       rows.push(summarize(`rules + ${model}`, cases, merged, ms / cases.length, cost, errors))
     }
     if (process.argv.includes('--jev')) {
-      const call: ModelCall = { model: JEV, apiKey: key, fetch, timeoutMs: 30_000 }
+      const call: ModelCall = { model: JEV, apiKey: key, fetch, timeoutMs: 12_000 }
       const withJev: Proposal[] = []
       let ms = 0
       let cost = 0
@@ -127,7 +144,7 @@ async function main() {
           cost += out.usage.cost ?? 0
         } catch {
           errors++
-          withJev.push(r)
+          withJev.push(EMPTY)
         }
       }
       rows.push(
