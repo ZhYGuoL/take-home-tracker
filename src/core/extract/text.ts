@@ -24,7 +24,13 @@ export function ownText(paste: string): string {
         .at(-1)
         ?.trim() ?? ''
     const forwarded = /forwarded message|^begin forwarded/i.test(before)
-    if (before && !forwarded && /^From:\s.+/.test(line) && /^Sent:/.test(next)) break
+    const outlookHeader = /^From:\s.+/.test(line) && /^Sent:/.test(next)
+    // A header right under a copied subject line, with no blank line between, is the message's
+    // own. One after body text and a blank line is a quote of an earlier message.
+    const firstText = out.findIndex((l) => l.trim())
+    const atTop =
+      firstText < 0 || (out.length - firstText <= 2 && out.slice(firstText).every((l) => l.trim()))
+    if (outlookHeader && !atTop && !forwarded) break
     if (line.startsWith('>')) continue
     out.push(all[i] ?? '')
   }

@@ -67,3 +67,26 @@ describe('withoutUrls', () => {
     expect(withoutUrls('see https://x.example.com/a?b=1').includes('?')).toBe(false)
   })
 })
+
+describe('ownText with Outlook headers', () => {
+  it('keeps the body when a subject line sits above the message header', () => {
+    const paste = `Take-home submission
+From: Omar Haddad <omar@example.com>
+Sent: Monday, September 28, 2026 3:00 PM
+To: Rae Lin <rae@example.com>
+
+Here it is: https://omar-app.vercel.app`
+    expect(ownText(paste)).toContain('https://omar-app.vercel.app')
+  })
+
+  it('still cuts an earlier message quoted under a second header block', () => {
+    const paste = `Here it is: https://omar-app.vercel.app
+
+From: Rae Lin <rae@example.com>
+Sent: Monday, September 28, 2026 3:00 PM
+To: Omar Haddad <omar@example.com>
+
+Hi Omar, here is the take-home`
+    expect(ownText(paste)).not.toContain('Hi Omar')
+  })
+})
