@@ -197,3 +197,15 @@ test('with nothing needing her, the way back names the view it loosens', async (
   await expect(page.getByRole('button', { name: /^Any view, not Needs you/ })).toContainText('1')
   await expect(page.getByRole('button', { name: /^Any text, not "fay"/ })).toContainText('3')
 })
+
+test('a count reads as its own word next to its option', async ({ page }) => {
+  await seed(page, [person('Count Carla')])
+  await page.getByRole('radio', { name: /All/ }).click()
+  await page.getByRole('button', { name: /^Stage/ }).click()
+  await expect(page.getByRole('checkbox', { name: 'Sent 1', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.getByRole('searchbox', { name: 'Search' }).fill('zzz')
+  await expect(
+    page.getByRole('button', { name: 'Any text, not "zzz" 1', exact: true }),
+  ).toBeVisible()
+})

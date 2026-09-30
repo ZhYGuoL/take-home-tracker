@@ -288,7 +288,7 @@ function Options<T extends string>({
             checked={o.checked}
             onChange={() => onToggle(o.value)}
           />
-          <span className="option-label">{o.label}</span>
+          <span className="option-label">{o.label}</span>{' '}
           <span className="num option-count">{o.count}</span>
         </label>
       ))}

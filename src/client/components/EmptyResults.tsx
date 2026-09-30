@@ -64,8 +64,7 @@ export function EmptyResults({ rows, filters, zone, onChange }: Props) {
           .map((h) => (
             <li key={h.label}>
               <button type="button" className="control hatch" onClick={() => onChange(h.next)}>
-                <span>{h.label}</span>
-                <span className="num option-count">{h.n}</span>
+                <span>{h.label}</span> <span className="num option-count">{h.n}</span>
               </button>
             </li>
           ))}
