@@ -16,7 +16,14 @@ export function toRow(r: StoredRecord): string[] {
   if (r.deleted) return [...head, '']
   const json = JSON.stringify(r.data)
   const cells: string[] = []
-  for (let i = 0; i < json.length; i += CELL) cells.push(json.slice(i, i + CELL))
+  for (let i = 0; i < json.length; ) {
+    let end = Math.min(i + CELL, json.length)
+    // An emoji takes two UTF-16 units. Splitting it would leave half a character in each cell.
+    const last = json.charCodeAt(end - 1)
+    if (end < json.length && last >= 0xd800 && last <= 0xdbff) end--
+    cells.push(json.slice(i, end))
+    i = end
+  }
   return [...head, ...(cells.length > 0 ? cells : [''])]
 }
 

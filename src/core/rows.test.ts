@@ -72,4 +72,16 @@ describe('rows', () => {
     for (const cell of row) expect(cell.length).toBeLessThanOrEqual(50_000)
     expect(fromRow(row)).toEqual(long)
   })
+
+  it('never splits an emoji between two cells', () => {
+    // The emoji takes two UTF-16 units and would straddle the first cell's end.
+    const notes = (pad: number) => `${'x'.repeat(pad)}🙂 done`
+    const at = JSON.stringify({ ...c, notes: notes(0) }).indexOf('🙂')
+    const long: StoredRecord = { ...live, data: { ...c, notes: notes(44_999 - at) } }
+    expect(JSON.stringify(long.data).indexOf('🙂')).toBe(44_999)
+    const row = toRow(long)
+    const lone = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+    for (const cell of row) expect(lone.test(cell)).toBe(false)
+    expect(fromRow(row)).toEqual(long)
+  })
 })
