@@ -34,11 +34,14 @@ export function derive(candidate: Candidate, entries: readonly Entry[]): Derived
   let submittedAt: string | null = null
   let submission: Link | null = null
   let repo: Link | null = null
-  let lastActivityAt = candidate.createdAt
+  // What happened last: the take-home going out, or anything on the timeline. When she added
+  // the candidate counts only when nothing else is known.
+  let lastActivityAt: string | null = candidate.sentAt
   let waitingSince: string | null = null
 
   for (const e of own) {
-    if (Date.parse(e.at) > Date.parse(lastActivityAt)) lastActivityAt = e.at
+    if (lastActivityAt === null || Date.parse(e.at) > Date.parse(lastActivityAt))
+      lastActivityAt = e.at
     switch (e.kind) {
       case 'message': {
         waitingSince = e.direction === 'in' && e.needsReply ? e.at : null
@@ -65,5 +68,12 @@ export function derive(candidate: Candidate, entries: readonly Entry[]): Derived
     }
   }
 
-  return { stage, submittedAt, submission, repo, lastActivityAt, waitingSince }
+  return {
+    stage,
+    submittedAt,
+    submission,
+    repo,
+    lastActivityAt: lastActivityAt ?? candidate.createdAt,
+    waitingSince,
+  }
 }

@@ -89,6 +89,17 @@ describe('derive: stage', () => {
       '2026-09-29T18:00:00Z',
     )
   })
+
+  it('last activity is what happened, not when she added the candidate', () => {
+    // Added today, from a message that came in yesterday.
+    const c = candidate({ createdAt: '2026-09-30T12:00:00Z', sentAt: null })
+    expect(derive(c, [submission(c, '2026-09-29T13:02:00Z')]).lastActivityAt).toBe(
+      '2026-09-29T13:02:00Z',
+    )
+    // Added today, for a take-home she sent two days ago.
+    const sent = candidate({ createdAt: '2026-09-30T12:00:00Z', sentAt: '2026-09-28T16:00:00Z' })
+    expect(derive(sent, []).lastActivityAt).toBe('2026-09-28T16:00:00Z')
+  })
 })
 
 describe('derive: Advanced and Passed come only from her click', () => {
