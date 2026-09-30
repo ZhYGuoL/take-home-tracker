@@ -54,7 +54,7 @@ Flags:
 - **Overdue**: the deadline passed, and nothing came in.
 - **Late**: the submission came in after the deadline.
 - **Needs reply**: the candidate's last message waits for your answer.
-  Click **Replied** when you answered it somewhere else.
+  Click **Mark replied** when you answered it somewhere else.
 
 Deadlines keep the time zone that you agreed with the candidate.
 "By Friday" ends at the end of Friday in that zone.

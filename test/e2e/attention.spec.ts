@@ -56,7 +56,7 @@ test.describe('Needs you', () => {
 
   test('replying and opening the submission take candidates out of Needs you', async ({ page }) => {
     await page.getByRole('button', { name: 'Ben Osei' }).click()
-    await page.getByRole('button', { name: 'Replied' }).click()
+    await page.getByRole('button', { name: 'Mark replied' }).click()
     await page.getByRole('button', { name: 'Close' }).click()
     await expect.poll(() => shownNames(page)).toEqual(['Ada Lindqvist', 'Cyd Marsh'])
 
@@ -192,9 +192,9 @@ test.describe('replies logged by hand', () => {
     await seed(page, [quinn, asked(quinn, '2026-10-05T22:00:00Z')])
     await page.getByRole('button', { name: 'Quinn Adler' }).click()
     const detail = page.getByRole('dialog', { name: 'Quinn Adler' })
-    await detail.getByRole('button', { name: 'Replied' }).click()
+    await detail.getByRole('button', { name: 'Mark replied' }).click()
     await expect(detail.getByText('Needs reply', { exact: true })).toHaveCount(0)
-    await expect(detail.getByRole('button', { name: 'Replied' })).toHaveCount(0)
+    await expect(detail.getByRole('button', { name: 'Mark replied' })).toHaveCount(0)
   })
 })
 

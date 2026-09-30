@@ -125,7 +125,7 @@ export function DetailPanel({
         <div className="actions">
           {row.flags.needsReply && (
             <button type="button" className="control primary" onClick={markReplied}>
-              Replied
+              Mark replied
             </button>
           )}
           <button type="button" className="control" onClick={() => setAdding('message')}>
