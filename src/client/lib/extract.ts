@@ -11,9 +11,15 @@ export type Extractor = (paste: string, ctx: ExtractContext) => Promise<Proposal
  * always works (D6).
  */
 export function makeExtractor(fetcher: typeof fetch = fetch, timeoutMs = 12_000): Extractor {
+  // Whether the model is on is asked again every 5 minutes, so a change on the server shows up.
   let enabled: Promise<boolean> | null = null
+  let askedAt = 0
   return async (paste, ctx) => {
     const rules = extractWithRules(paste, ctx)
+    if (Date.now() - askedAt > 300_000) {
+      enabled = null
+      askedAt = Date.now()
+    }
     enabled ??= fetcher('/api/model')
       .then((r) => (r.ok ? (r.json() as Promise<{ enabled?: boolean }>) : { enabled: false }))
       .then((j) => j.enabled === true)

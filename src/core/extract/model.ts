@@ -1,6 +1,7 @@
 import { normalizeContact } from '../contacts'
 import { normalizeUrl } from '../links'
 import { LINK_KINDS, type Link, type LinkKind, SOURCES, type Source } from '../types'
+import { matchCandidate } from './match'
 import { findUrls } from './text'
 import type { ExtractContext, Proposal } from './types'
 import { parseClock, parseDeadline, parseStamp } from './when'
@@ -66,11 +67,11 @@ export const SYSTEM_PROMPT = `You read one message that a recruiter pasted into 
 
 - candidate_name: the candidate's name as written. Prefer a full name from a header or signature. For her own outgoing message, the person she writes to. Never the recruiter.
 - candidate_contacts: the candidate's emails, @handles, and phone numbers that appear in the paste. Never the recruiter's.
-- role: the job title named in the paste, such as "Founding engineer", in sentence case. Null if none.
+- role: the job title the paste names, in sentence case. Null if the paste names none.
 - source: "email", "x", "linkedin", "imessage", or "other" (Slack, WhatsApp, Telegram, Discord). Null when the paste does not show where it came from.
 - direction: "out" when the recruiter wrote it, "in" when the candidate wrote it.
 - sent_at_text: the timestamp of the message, copied exactly, such as "Fri, Oct 2, 9:14 AM" or "10:42 AM". Null if none.
-- deadline_text: only in her outgoing message, the phrase that sets the candidate's deadline, copied exactly, such as "48 hours" or "by Friday 5pm ET". Null otherwise.
+- deadline_text: only in her outgoing message, the whole sentence or clause that sets the candidate's deadline, copied exactly, such as "You have 48 hours to finish it" or "Please send it by Friday 5pm ET". Null otherwise.
 - links: every link in the paste, with kind "submission" (deployed app or demo video), "repo" (code repository), "doc" (the take-home assignment document), or "other". Skip links inside quoted earlier messages.
 - needs_reply: true when the candidate's message asks her something or waits on her. False for a plain submission or thanks. False for her own messages.
 - existing_candidate_id: the id of the known candidate this message is about, only when an email, handle, phone, link, or name clearly matches one of them. Null otherwise.`
@@ -148,28 +149,38 @@ export function proposalFromReading(r: ModelReading, paste: string, ctx: Extract
     )
     .map(normalizeContact)
     .filter((c) => c && c !== self)
-  const id = r.existing_candidate_id
-  const match =
-    id && ctx.candidates.some((c) => c.id === id)
-      ? { id, strength: 'strong' as const, via: 'model' }
-      : null
   const out = r.direction === 'out'
   const sentText = r.sent_at_text && inPaste(paste, r.sent_at_text) ? r.sent_at_text : null
   const dueText = out && r.deadline_text && inPaste(paste, r.deadline_text) ? r.deadline_text : null
+  // Every word must be in the paste, so the model cannot borrow a surname from the known list.
+  const allIn = (value: string | null) =>
+    value?.trim() && value.split(/\s+/).every((w) => inPaste(paste, w)) ? value.trim() : null
+  const name = allIn(r.candidate_name)
+  const messageAt = sentText
+    ? (parseStamp(sentText, ctx.now, ctx.zone) ?? parseClock(sentText, ctx.now, ctx.zone))
+    : null
+  const contactList = [...new Set(contacts)]
+  // The model's pick is strong only when the paste shares real evidence with that candidate.
+  // A pick on a first name alone is weak, like the rules', so it never attaches by default.
+  const picked = ctx.candidates.find((c) => c.id === r.existing_candidate_id)
+  const evidence = picked ? matchCandidate({ name, contacts: contactList, links }, [picked]) : null
+  const match = picked
+    ? {
+        id: picked.id,
+        strength: evidence?.strength ?? ('weak' as const),
+        via: evidence?.via ?? picked.name,
+      }
+    : null
   return {
-    name:
-      r.candidate_name && inPaste(paste, r.candidate_name.split(' ')[0] ?? '')
-        ? r.candidate_name
-        : null,
-    contacts: [...new Set(contacts)],
-    role: r.role,
+    name,
+    contacts: contactList,
+    role: allIn(r.role),
     source: r.source,
     direction: r.direction,
-    messageAt: sentText
-      ? (parseStamp(sentText, ctx.now, ctx.zone) ?? parseClock(sentText, ctx.now, ctx.zone))
-      : null,
+    messageAt,
     links,
-    deadline: dueText ? parseDeadline(dueText, ctx.now, ctx.zone) : null,
+    // "48 hours" counts from when she sent the message.
+    deadline: dueText ? parseDeadline(dueText, messageAt ?? ctx.now, ctx.zone) : null,
     needsReply: !out && r.needs_reply,
     match,
   }
@@ -184,16 +195,18 @@ export function mergeProposals(rules: Proposal, model: Proposal): Proposal {
   const kinds = new Map(model.links.map((l) => [l.url, l.kind]))
   const links = rules.links.map((l) => ({ ...l, kind: kinds.get(l.url) ?? l.kind }))
   for (const l of model.links) if (!links.some((x) => x.url === l.url)) links.push(l)
+  const strong = (p: Proposal) => (p.match?.strength === 'strong' ? p.match : null)
   return {
     name: model.name ?? rules.name,
     contacts: [...new Set([...model.contacts, ...rules.contacts])],
     role: model.role ?? rules.role,
     source: model.source ?? rules.source,
     direction: model.direction,
-    messageAt: model.messageAt ?? rules.messageAt,
+    // Times come from the rules when they read one: they see the day lines a copied time loses.
+    messageAt: rules.messageAt ?? model.messageAt,
     links,
-    deadline: model.direction === 'out' ? (model.deadline ?? rules.deadline) : null,
+    deadline: model.direction === 'out' ? (rules.deadline ?? model.deadline) : null,
     needsReply: model.needsReply,
-    match: model.match ?? (rules.match?.strength === 'strong' ? rules.match : null),
+    match: strong(rules) ?? strong(model) ?? model.match ?? rules.match,
   }
 }

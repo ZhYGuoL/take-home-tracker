@@ -8,7 +8,7 @@ const ctx: ExtractContext = {
   candidates: [],
   self: { name: 'Rae Lin', email: 'rae@example.com' },
 }
-const paste = 'hey Rae, it is done: https://app-ex.vercel.app'
+const paste = 'hey Rae, my founding engineer take-home is done: https://app-ex.vercel.app'
 const reading = {
   candidate_name: null,
   candidate_contacts: [],
@@ -33,7 +33,7 @@ describe('makeExtractor', () => {
     const extract = vi.fn()
     const f = fetcher(false, extract)
     const p = await makeExtractor(f)(paste, ctx)
-    expect(p.role).toBeNull()
+    expect(p.source).toBeNull()
     expect(extract).not.toHaveBeenCalled()
   })
 
@@ -51,7 +51,7 @@ describe('makeExtractor', () => {
     )
     const p = await makeExtractor(f)(paste, ctx)
     expect(p.links.map((l) => l.kind)).toEqual(['submission'])
-    expect(p.role).toBeNull()
+    expect(p.source).toBeNull()
   })
 
   it('falls back to the rules when the model is slow', async () => {
@@ -62,7 +62,7 @@ describe('makeExtractor', () => {
       )
     }) as unknown as typeof fetch
     const p = await makeExtractor(f, 20)(paste, ctx)
-    expect(p.role).toBeNull()
+    expect(p.source).toBeNull()
   })
 
   it('falls back to the rules when the Worker cannot be reached', async () => {

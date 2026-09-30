@@ -20,7 +20,7 @@ const ctx: ExtractContext = {
 
 const paste = `Priya Raman
 Fri, Sep 25, 9:14 AM
-hey Rae! live: https://ledger-ex.vercel.app code: github.com/ex-praman/ledger
+hey Rae! my founding engineer take-home. live: https://ledger-ex.vercel.app code: github.com/ex-praman/ledger
 can I also add tests later?`
 
 const reading = (over: Partial<ModelReading> = {}): ModelReading => ({
@@ -66,6 +66,40 @@ describe('proposalFromReading', () => {
     expect(p.contacts).toEqual([])
     expect(p.messageAt).toBeNull()
     expect(p.match).toBeNull()
+  })
+
+  it('drops a name or role with a word the paste does not contain', () => {
+    const p = proposalFromReading(
+      reading({ candidate_name: 'Priya Natarajan', role: 'Staff engineer' }),
+      paste,
+      ctx,
+    )
+    expect(p.name).toBeNull()
+    expect(p.role).toBeNull()
+  })
+
+  it('a model pick with no shared evidence is weak, so it does not attach by default', () => {
+    const p = proposalFromReading(
+      reading({ candidate_name: 'Priya', existing_candidate_id: 'c-priya' }),
+      'can I use postgres? - Priya',
+      ctx,
+    )
+    expect(p.match).toEqual({ id: 'c-priya', strength: 'weak', via: 'Priya' })
+  })
+
+  it('counts "48 hours" from when her message was sent', () => {
+    const out =
+      'Rae Lin <rae@example.com>\nMon, Sep 28, 9:00 AM (2 days ago)\nto Priya\n\nYou have 48 hours.'
+    const p = proposalFromReading(
+      reading({
+        direction: 'out',
+        sent_at_text: 'Mon, Sep 28, 9:00 AM',
+        deadline_text: 'You have 48 hours',
+      }),
+      out,
+      ctx,
+    )
+    expect(p.deadline?.at).toBe('2026-09-30T16:00:00.000Z')
   })
 
   it('never takes her own email as the candidate contact', () => {
