@@ -14,11 +14,13 @@ If the context is new, read these before you do anything:
 
 ## Commands
 
-- `pnpm dev` starts the app, the Worker, and a local fake Google (`test/fake-google/server.ts`). Sign in as either fictional person.
+- `pnpm dev` starts the app, the Worker, and a local fake Google (`test/fake-google/server.ts`). Sign in as any of the three fictional people.
+- `pnpm demo` fills the fake Google Sheet of Avery Stone with fictional candidates, while `pnpm dev` runs.
 - `pnpm eval` measures extraction on the fictional test sets (D14, D17).
 - `pnpm run deploy` builds and deploys the production Worker (B4). Never run it without Zhiyuan's OK.
 - `pnpm check` is the fast check: lint, typecheck, unit tests. A pre-commit hook runs it.
-- `pnpm verify` is the full verify: the fast check, the production build, and the end-to-end tests.
+- `pnpm verify` is the full verify: the fast check, the end-to-end tests, the production build, and the bundle check.
+- `docs/qa/` holds the browser screenshots, and `docs/qa/aside/` the Aside scripts that take them again.
 
 ## Rules
 
@@ -31,3 +33,4 @@ If the context is new, read these before you do anything:
 - UI copy: no text that explains the mechanism, no em dashes, no exclamation marks.
   Motion only when the user can name its cause. Hover never reveals content.
 - Domain rules live in `src/core` as pure functions with unit tests.
+- Sign-out ends the whole Google grant, as at Google. An e2e test that signs out uses Blake or Casey, never Avery, whose session the other tests share.
