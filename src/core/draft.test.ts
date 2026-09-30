@@ -1,0 +1,126 @@
+import { describe, expect, it } from 'vitest'
+import {
+  type CandidateDraft,
+  candidateFromDraft,
+  draftFromCandidate,
+  emptyDraft,
+  submissionFromDraft,
+  validateDraft,
+} from './draft'
+
+const LA = 'America/Los_Angeles'
+const now = Date.parse('2026-09-30T17:05:00Z') // 10:05 PDT
+const base = { id: 'c-1', createdAt: '2026-09-30T17:05:00.000Z' }
+
+function draft(overrides: Partial<CandidateDraft> = {}): CandidateDraft {
+  return { ...emptyDraft(LA, now), name: 'Rowan Okafor', ...overrides }
+}
+
+describe('emptyDraft', () => {
+  it('starts with the take-home sent now, in her zone', () => {
+    const d = emptyDraft(LA, now)
+    expect([d.sentDate, d.sentTime, d.dueZone]).toEqual(['2026-09-30', '10:05', LA])
+  })
+})
+
+describe('validateDraft', () => {
+  it('needs a name', () => {
+    expect(validateDraft(draft({ name: '  ' })).name).toBe('Required')
+  })
+
+  it('rejects a link that is not a web link', () => {
+    expect(validateDraft(draft({ submissionUrl: 'see message' })).submissionUrl).toBe(
+      'Not a web link',
+    )
+  })
+
+  it('needs the time of a submission, because the time decides Late', () => {
+    expect(validateDraft(draft({ submittedDate: '2026-10-01' })).submittedTime).toBe('Time needed')
+  })
+
+  it('accepts a complete draft', () => {
+    expect(validateDraft(draft({ takeHomeUrl: 'docs.example.com/d/abc' }))).toEqual({})
+  })
+})
+
+describe('candidateFromDraft', () => {
+  it('reads the deadline in its own zone, not her zone', () => {
+    const c = candidateFromDraft(
+      draft({ dueDate: '2026-10-02', dueTime: '17:00', dueZone: 'America/New_York' }),
+      LA,
+      base,
+    )
+    expect(c.deadline).toEqual({
+      at: '2026-10-02T21:00:00.000Z',
+      zone: 'America/New_York',
+      dateOnly: false,
+    })
+  })
+
+  it('a deadline date with no time is the end of that day', () => {
+    const c = candidateFromDraft(draft({ dueDate: '2026-10-02' }), LA, base)
+    expect(c.deadline?.dateOnly).toBe(true)
+  })
+
+  it('normalizes links and contacts', () => {
+    const c = candidateFromDraft(
+      draft({
+        takeHomeUrl: 'docs.example.com/d/abc',
+        contacts: 'Rowan@Example.com, (555) 010-0142',
+      }),
+      LA,
+      base,
+    )
+    expect(c.takeHomeUrl).toBe('https://docs.example.com/d/abc')
+    expect(c.contacts).toEqual(['rowan@example.com', '+15550100142'])
+  })
+
+  it('round-trips through draftFromCandidate', () => {
+    const d = draft({
+      role: 'Founding engineer',
+      dueDate: '2026-10-02',
+      dueTime: '17:00',
+      dueZone: 'America/New_York',
+      notes: 'strong systems background',
+    })
+    const c = candidateFromDraft(d, LA, base)
+    const again = candidateFromDraft(draftFromCandidate(c, LA), LA, base)
+    expect(again).toEqual(c)
+  })
+})
+
+describe('submissionFromDraft', () => {
+  const c = candidateFromDraft(draft(), LA, base)
+
+  it('makes no entry without a link', () => {
+    expect(submissionFromDraft(draft(), LA, c, 'e-1', now)).toBeNull()
+  })
+
+  it('makes an inbound message with the submission and repo links', () => {
+    const e = submissionFromDraft(
+      draft({
+        submissionUrl: 'rowan-pantry.example.com',
+        repoUrl: 'github.com/example-rowan/pantry',
+        submittedDate: '2026-10-01',
+        submittedTime: '09:30',
+      }),
+      LA,
+      c,
+      'e-1',
+      now,
+    )
+    expect(e).toMatchObject({
+      direction: 'in',
+      at: '2026-10-01T16:30:00.000Z',
+      links: [
+        { url: 'https://rowan-pantry.example.com/', kind: 'submission' },
+        { url: 'https://github.com/example-rowan/pantry', kind: 'repo' },
+      ],
+    })
+  })
+
+  it('uses now when the submission has no date', () => {
+    const e = submissionFromDraft(draft({ submissionUrl: 'x.example.com' }), LA, c, 'e-1', now)
+    expect(e?.at).toBe(new Date(now).toISOString())
+  })
+})
