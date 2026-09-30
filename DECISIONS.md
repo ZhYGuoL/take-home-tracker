@@ -94,6 +94,9 @@ So the personal data really goes away, and it is not only hidden.
 - One tombstone row stays: the id, the type, the time, and no data.
   It stops an older edit from an offline device from bringing the candidate back.
 - An entry that she moved to another candidate keeps its newest row.
+- A delete sends only the candidate's tombstone, not one per entry.
+  A device that has not pulled yet could otherwise hide a message that another device moved away.
+  The deleting device forgets the entries at once, so no message text stays on it.
 - The device that deletes purges at once.
   Any device purges a delete that is older than 10 minutes, in case that device closed first.
   The wait keeps two devices from deleting rows by position at the same moment.

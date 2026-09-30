@@ -104,6 +104,15 @@ export class SheetSync implements Persistence {
     void this.push()
   }
 
+  async forget(ids: string[]): Promise<void> {
+    if (ids.length === 0) return
+    const gone = new Set(ids)
+    await this.serial(async () => {
+      await this.cache.setPending((await this.cache.pending()).filter((r) => !gone.has(r.id)))
+      await this.cache.setRecords((await this.cache.records()).filter((r) => !gone.has(r.id)))
+    })
+  }
+
   private spreadsheet(): Promise<Spreadsheet> {
     this.sheet ??= this.api.findOrCreate().then(
       async (s) => {

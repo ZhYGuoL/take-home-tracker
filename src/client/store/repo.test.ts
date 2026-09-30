@@ -3,9 +3,16 @@ import type { StoredRecord } from '../../core/records'
 import { candidate, message, submission } from '../../core/testing/fixtures'
 import { monotonicClock, type Persistence, Repo } from './repo'
 
-function memory(): Persistence & { saved: StoredRecord[] } {
+function memory(): Persistence & { saved: StoredRecord[]; forgotten: string[] } {
   const saved: StoredRecord[] = []
-  return { saved, load: async () => [], save: async (r) => void saved.push(...r) }
+  const forgotten: string[] = []
+  return {
+    saved,
+    forgotten,
+    load: async () => [],
+    save: async (r) => void saved.push(...r),
+    forget: async (ids) => void forgotten.push(...ids),
+  }
 }
 
 describe('monotonicClock', () => {
@@ -47,15 +54,20 @@ describe('Repo', () => {
     expect(repo.getSnapshot()).toEqual({ candidates: [], entries: [] })
   })
 
-  it('a deleted candidate leaves no name, contact, note, or message behind', async () => {
+  it('deleting a candidate sends only its tombstone, and forgets its messages on this device', async () => {
     const p = memory()
     const repo = new Repo(p)
     const c = candidate({ name: 'Private Name', contacts: ['private@example.com'], notes: 'n' })
-    await repo.saveAll([c, message(c, '2026-09-30T10:00:00Z', { text: 'private text' })])
+    const e = message(c, '2026-09-30T10:00:00Z', { text: 'private text' })
+    await repo.saveAll([c, e])
+    const before = p.saved.length
     await repo.deleteCandidate(c)
-    const stored = new Map(p.saved.map((r) => [r.id, r]))
-    expect([...stored.values()].every((r) => r.deleted && r.data === null)).toBe(true)
-    expect(JSON.stringify([...stored.values()])).not.toMatch(/Private|private/)
+    // The Sheet purge removes the messages, so no tombstone can hide one that moved elsewhere.
+    expect(p.saved.slice(before)).toEqual([
+      { id: c.id, type: 'candidate', updatedAt: expect.any(String), deleted: true, data: null },
+    ])
+    expect(p.forgotten).toEqual([e.id])
+    expect(JSON.stringify(repo.getSnapshot())).not.toMatch(/Private|private/)
   })
 
   it('keeps the same snapshot object until something changes', async () => {
@@ -72,6 +84,7 @@ describe('Repo save failures', () => {
       saved: [] as StoredRecord[],
       failNext: 0,
       load: async () => [],
+      forget: async () => {},
       save: async (r: StoredRecord[]) => {
         if (p.failNext > 0) {
           p.failNext--

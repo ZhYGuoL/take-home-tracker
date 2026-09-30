@@ -127,6 +127,27 @@ describe('SheetSync', () => {
     ])
   })
 
+  it('a candidate deleted on a device that has not pulled yet keeps a message moved elsewhere', async () => {
+    const sheet = memorySheet()
+    const laptop = device(sheet)
+    const phone = device(sheet)
+    const a = candidate({ name: 'Wrong Person' })
+    const b = candidate({ name: 'Right Person' })
+    const e = submission(a, '2026-09-30T10:00:00Z')
+    await laptop.repo.saveAll([a, b, e])
+    await laptop.sync.push()
+    await phone.sync.pull()
+    // The laptop moves the message. The phone still shows it on A, and deletes A.
+    await laptop.repo.saveEntry({ ...e, candidateId: b.id })
+    await laptop.sync.push()
+    await phone.repo.deleteCandidate(a)
+    await phone.sync.push()
+    await phone.sync.pull()
+    expect(phone.repo.getSnapshot().entries.map((x) => [x.id, x.candidateId])).toEqual([
+      [e.id, b.id],
+    ])
+  })
+
   it('a save made while a push is sending also goes out', async () => {
     const sheet = memorySheet()
     const { repo, sync } = device(sheet)

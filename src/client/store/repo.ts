@@ -4,6 +4,8 @@ import type { Candidate, Entry } from '../../core/types'
 export interface Persistence {
   load(): Promise<StoredRecord[]>
   save(changed: StoredRecord[]): Promise<void>
+  /** Drops records from this device only. Nothing about it goes to the Sheet. */
+  forget(ids: string[]): Promise<void>
 }
 
 /** Every save gets a strictly later timestamp than the last one on this device. */
@@ -77,13 +79,19 @@ export class Repo {
     ])
   }
 
-  /** Deletes the candidate and every entry on its timeline. */
-  deleteCandidate(c: Candidate): Promise<void> {
-    const own = this.snapshot.entries.filter((e) => e.candidateId === c.id)
-    return this.write([
-      ...own.map((e) => this.tombstone(e.id, 'entry')),
-      this.tombstone(c.id, 'candidate'),
-    ])
+  /**
+   * Deletes the candidate. Only its tombstone goes to the Sheet, whose purge removes every
+   * entry that still names it (D3). A tombstone per entry could hide a message that another
+   * device moved to someone else. This device forgets the entries at once, so no message
+   * text stays here, and a message moved elsewhere comes back with the next pull.
+   */
+  async deleteCandidate(c: Candidate): Promise<void> {
+    const own = this.snapshot.entries.filter((e) => e.candidateId === c.id).map((e) => e.id)
+    for (const id of own) this.records.delete(id)
+    await this.persistence.forget(own).catch((err: unknown) => {
+      console.error('forget failed', err instanceof Error ? err.name : 'unknown')
+    })
+    return this.write([this.tombstone(c.id, 'candidate')])
   }
 
   saveEntry(e: Entry): Promise<void> {
