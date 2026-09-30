@@ -128,7 +128,7 @@
 ## What waits on Zhiyuan
 
 Every remaining item is in `BLOCKERS.md`:
-- B1: decide about the early git history before the repo goes public.
+- B1 is done: the history no longer holds her name or the possibly real number.
 - B2: a model key, to measure the models and maybe turn one on.
 - B3: a Google OAuth client, so real sign-in works.
 - B4: deploy a copy.

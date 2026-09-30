@@ -3,32 +3,17 @@
 Each item is something only Zhiyuan can do.
 Each item says what is missing, why it matters, and the exact steps.
 
-## B1. Decide about the early history before the repo goes public
+## B1. The early history - done on 2026-09-30
 
-**What.** Commit `c85b5fc` ("docs: record D1 to D12") has 11 lines with the recruiter's first name.
-One of them is a personal sentence.
-Later commits removed all of them from the files, and no other commit adds her name.
-They are still in the git history, and the unattended run may not rewrite history.
+**What was done.** With Zhiyuan's OK, `git filter-repo` rewrote the history and kept every commit:
+- The recruiter's first name is now "the recruiter" everywhere, and a personal sentence is gone.
+- A demo phone number that might be real is now a fictional 555-01xx number.
+- Every commit now has the GitHub no-reply address as its author, and this repo uses it for new commits.
 
-Commit `c55e3c4` added the phone number `+1 555 010 0123` to the demo data, and `a9649e1` removed it.
-It has the format of a Japanese mobile number, so it may belong to a real person.
-The new history in step 2 removes it too.
+Two commits became empty and dropped out, so the history has 180 commits. Every commit id changed.
 
-Every commit also carries the git author email of this computer.
-If you want the GitHub no-reply address in public, the new history in step 2 is the moment to set it.
-
-**Why it matters.** Anyone can read the full history of a public repo.
-
-**Steps.** Pick one before the first push:
-1. If those lines are fine to publish, do nothing.
-2. If not, publish a new history with one commit:
-   ```
-   git branch -m main history
-   git checkout --orphan main
-   git commit -m "initial public release"
-   ```
-   Push only `main`.
-   The full history stays on the local `history` branch.
+**Left for Zhiyuan.** The old history is in a backup file next to this folder: `../take-home-tracker-before-scrub.bundle`.
+It still holds the old lines. Never push it, and delete it when you no longer need it.
 
 ## B2. A model key, to measure the models and maybe turn one on
 
