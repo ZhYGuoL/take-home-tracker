@@ -139,11 +139,18 @@ They need an email sender and a user store, and v2 needs Google anyway.
 ## D5. No dev-only sign-in in production
 
 **Choice.** There is no special dev login route.
-Development and tests use the real OAuth code path against a local fake Google server (`test/fake-google`).
+Development and tests use the real OAuth code path against a local fake Google server (`test/fake-google`, planned for M5).
 - The production Worker entry (`src/worker/index.ts`) has the Google endpoints as constants.
 - Only the dev entry (`src/worker/dev.ts`) can point at the fake server.
-  `wrangler.jsonc`, which is the only deploy config, uses the production entry.
-- A test builds the production bundle and fails if it contains the fake server or the dev entry.
+  The dev entry also answers 404 to every host that is not `localhost` or `127.0.0.1`.
+- `vite build` makes the production entry by default.
+  Only the dev server, preview, and `--mode e2e` use the dev entry.
+  Any other mode fails.
+- `pnpm deploy` builds the production entry and deploys it with an explicit config path.
+  It does not use the file that the Vite plugin writes after each build, which can point at the last e2e build.
+- `scripts/check-prod-bundle.ts` runs at the end of `pnpm verify` and before every deploy.
+  It fails if the production bundle contains the dev entry marker or a fake Google reference.
+  It also fails if a plain `wrangler deploy` would deploy anything other than the production build.
 
 **Reason.** The brief requires that nobody can turn on a dev sign-in in production.
 Here there is nothing to turn on, and tests still exercise the real sign-in code.
