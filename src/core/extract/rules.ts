@@ -193,7 +193,32 @@ function chat(all: string[], now: string, zone: string): Head | null {
       body: all.slice(first + 1).join('\n'),
     })
   }
-  return null
+  return nameThenTime(all, first, now, zone)
+}
+
+/** Words that make a first line a subject, not a person. */
+const SUBJECT_WORDS = new Set(
+  'take home take-home submission assignment question update project task exercise challenge interview re fwd'.split(
+    ' ',
+  ),
+)
+
+/**
+ * A name on the first line and only a time on the next, as Messages and other apps copy a
+ * message: "Priya Raman", then "Today 9:14 AM" or "Fri, Sep 25, 9:14 AM".
+ */
+function nameThenTime(all: string[], first: number, now: string, zone: string): Head | null {
+  const who = clean(all[first] ?? '')
+  const when = (all[first + 1] ?? '').trim()
+  const words = who.toLowerCase().split(/\s+/)
+  if (!NAME.test(who) || words.some((w) => NOT_NAMES.has(w) || SUBJECT_WORDS.has(w))) return null
+  // A short line that is only a date and a time, not a sentence that mentions one.
+  if (when.length > 32 || /[?!.]$/.test(when) || when.split(/\s+/).length > 6) return null
+  const stamp = /^\d{1,2}:\d{2}\s*([AP]M)?$/i.test(when)
+    ? parseClock(` ${when} `, now, zone)
+    : parseStamp(when, now, zone)
+  if (!stamp) return null
+  return head({ sender: who, stamp, body: all.slice(first + 2).join('\n') })
 }
 
 /**

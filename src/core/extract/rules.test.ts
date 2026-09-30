@@ -66,3 +66,46 @@ Hi Lena, here is the take-home.`,
     expect(p.name).toBe('Lena')
   })
 })
+
+describe('a name line, then a time line, as a copied chat shows them', () => {
+  const priya = { id: 'c-p', name: 'Priya Raman', role: '', contacts: [], links: [] }
+
+  it('reads the sender and the time, and attaches to the candidate with that full name', () => {
+    const p = extractWithRules(
+      'Priya Raman\nToday 9:14 AM\nHi Rae! My take-home is done: https://priya-ledger.example.com',
+      ctx({ candidates: [priya] }),
+    )
+    expect(p.name).toBe('Priya Raman')
+    expect(p.messageAt).toBe('2026-09-30T16:14:00.000Z')
+    expect(p.match).toMatchObject({ id: 'c-p', strength: 'strong' })
+  })
+
+  it('reads a time line with a date too', () => {
+    const p = extractWithRules('Priya Raman\nFri, Sep 25, 9:14 AM\nhey Rae! all done', ctx())
+    expect(p.name).toBe('Priya Raman')
+    expect(p.messageAt).toBe('2026-09-25T16:14:00.000Z')
+  })
+
+  it('does not take a subject line or a sentence for a name or a time', () => {
+    const subject = extractWithRules(
+      'Take Home Submission\nSep 30, 2026, 9:14 AM\nHere it is.',
+      ctx(),
+    )
+    expect(subject.name).toBeNull()
+    const sentence = extractWithRules(
+      'Priya Raman\nCan we move our call to Oct 2 at 3:00 PM instead?',
+      ctx(),
+    )
+    expect(sentence.messageAt).toBeNull()
+  })
+
+  it('her own name on top makes it her message, to the person she greets', () => {
+    const p = extractWithRules(
+      'Rae Lin\nToday 9:14 AM\nHi Omar, here is the take-home. You have 48 hours.',
+      ctx(),
+    )
+    expect(p.direction).toBe('out')
+    expect(p.name).toBe('Omar')
+    expect(p.deadline?.at).toBe('2026-10-02T16:14:00.000Z')
+  })
+})
