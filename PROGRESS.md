@@ -52,3 +52,14 @@
 - Open: the app does not know her name and email until sign-in (M5). Until then, her own messages are recognized by their headers and wording.
 - Evidence: `test/e2e/paste.spec.ts` (F1: prefilled name, links, and date, corrected before saving; F2: a second paste attaches), `src/core/paste.test.ts`, `src/core/move.test.ts`, `src/core/extract/*.test.ts`, `eval/*.test.ts`. `pnpm verify` exit 0: 261 unit tests, 118 e2e tests, 4 skipped as desktop-only.
 - F1 and F2 pass.
+
+## M4 Model choice - done (model runs blocked on a key, B2)
+
+- Three fictional test sets (D14): a first development set (38), a second one written blind and then used to improve the rules (40), and a blind measurement set written by another agent (40).
+- `pnpm eval` scores the rules, each chat model, each merged reading, and Jev (direction, needs reply, match only). Every field is checked on every case, a match counts only if it attaches by default, and a failed or slow model call counts as wrong.
+- The rules on the blind set, with her identity: name 88%, contacts 95%, role 100%, source 93%, direction 95%, message time 90%, links 95%, deadline 93%, needs reply 88%, match 88% (D17).
+- No `OPENROUTER_API_KEY`, so no model ran. The rules are the reader. D17 has an exact rule for turning a model on, and B2 has the steps.
+- The model path is built and tested: structured output, zero-retention endpoints only, only the candidates a paste mentions, a 1,000-token cap, a 12-second timeout, an allowlist and a per-user rate limit in the Worker, and a fallback to the rules on any failure (D6, D13, D16).
+- Reviewer findings fixed, including the M3 fixes it also reviewed: the privacy claim (zero retention, not only no training), the whole roster going to the model, model picks that bypassed the first-name rule, deadlines from paste time on the model path, a scorer that inflated numbers, an eval that hid model failures, an Outlook body lost under a subject line, and a one-word name that blocked a match.
+- Evidence: F3 in `src/core/derive.test.ts` (500 random automatic histories never reach Advanced or Passed), `src/core/paste.test.ts`, `test/e2e/candidates.spec.ts`, and the model reading, which has no stage field. F9 in `test/e2e/candidates.spec.ts` ("with the model off, adding and advancing a candidate by hand works end to end") and `src/client/lib/extract.test.ts`. `pnpm verify` exit 0: 297 unit tests, 120 e2e tests, 4 skipped as desktop-only.
+- F3 and F9 pass.
