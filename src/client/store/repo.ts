@@ -56,6 +56,13 @@ export class Repo {
     return this.persist(again)
   }
 
+  /** Replaces everything with a full set, such as what a pull read from the Sheet. */
+  replaceAll(records: StoredRecord[]): void {
+    this.records = mergeRecords(new Map(), records)
+    this.snapshot = live(this.records.values())
+    for (const fn of this.listeners) fn()
+  }
+
   /** Applies records that came from elsewhere, such as another device. */
   apply(incoming: StoredRecord[]): void {
     if (incoming.length === 0) return
