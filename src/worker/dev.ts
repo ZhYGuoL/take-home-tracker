@@ -1,10 +1,9 @@
 import { createApp } from './app'
+import { DEV_ENTRY_MARKER } from './dev-marker'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 
-/** The production bundle check fails if this string ships (D5). */
-export const DEV_ENTRY_MARKER = 'take-home-tracker-dev-entry'
-
+// Workers treat every named export of the entry as a handler, so this file exports only the default.
 const app = createApp()
 
 export default {

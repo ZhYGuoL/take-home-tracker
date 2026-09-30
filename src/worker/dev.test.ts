@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import dev, { DEV_ENTRY_MARKER } from './dev'
+import dev from './dev'
+import { DEV_ENTRY_MARKER } from './dev-marker'
 
 const ctx = {
   waitUntil() {},
