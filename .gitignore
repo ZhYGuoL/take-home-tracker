@@ -26,3 +26,6 @@ eval/results/*.local.json
 .idea/
 *.log
 dist-*/
+
+# the brief quotes private messages (D11)
+BRIEF.md
