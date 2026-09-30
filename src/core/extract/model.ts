@@ -76,8 +76,40 @@ export const SYSTEM_PROMPT = `You read one message that a recruiter pasted into 
 - existing_candidate_id: the id of the known candidate this message is about, only when an email, handle, phone, link, or name clearly matches one of them. Null otherwise.`
 
 /** The user message: the known candidates, then the paste. The recruiter's name keeps her out of the answer. */
+/**
+ * Only the known candidates that the paste mentions: a contact, a link, or a name word.
+ * The model never sees the rest of her pipeline (D16).
+ */
+export function mentioned(paste: string, candidates: ExtractContext['candidates']) {
+  const text = paste.toLowerCase()
+  const digits = paste.replace(/\D/g, '')
+  return candidates
+    .filter(
+      (c) =>
+        c.contacts.some((x) =>
+          x.startsWith('+') ? digits.includes(x.replace(/\D/g, '').slice(-10)) : text.includes(x),
+        ) ||
+        c.links.some((l) =>
+          text.includes(
+            l
+              .replace(/^https?:\/\/(www\.)?/, '')
+              .replace(/\/$/, '')
+              .toLowerCase(),
+          ),
+        ) ||
+        c.name
+          .toLowerCase()
+          .split(/\s+/)
+          .some(
+            (w) =>
+              w.length >= 3 && new RegExp(`\\b${w.replace(/[^\p{L}]/gu, '')}`, 'iu').test(paste),
+          ),
+    )
+    .slice(0, 20)
+}
+
 export function userPrompt(paste: string, ctx: ExtractContext): string {
-  const known = ctx.candidates.map((c) => ({
+  const known = mentioned(paste, ctx.candidates).map((c) => ({
     id: c.id,
     name: c.name,
     contacts: c.contacts,

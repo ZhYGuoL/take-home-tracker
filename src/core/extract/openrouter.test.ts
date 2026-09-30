@@ -38,7 +38,8 @@ describe('readWithModel', () => {
     const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
     const body = JSON.parse(String(init.body))
-    expect(body.provider).toEqual({ data_collection: 'deny', require_parameters: true })
+    expect(body.provider).toEqual({ zdr: true, data_collection: 'deny', require_parameters: true })
+    expect(body.max_tokens).toBe(1000)
     expect(body.response_format.type).toBe('json_schema')
     expect(body.temperature).toBe(0)
   })
@@ -97,6 +98,7 @@ describe('classifyWithJev', () => {
     expect(url).toBe('https://openrouter.ai/api/v1/systemone')
     const body = JSON.parse(String(init.body))
     expect(Object.keys(body.questions)).toEqual(['needs_reply', 'direction', 'match'])
+    expect(body.provider).toEqual({ zdr: true, data_collection: 'deny' })
     expect(body.questions.match.criteria).toHaveProperty('none')
   })
 })

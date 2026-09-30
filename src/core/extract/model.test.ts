@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { type ModelReading, mergeProposals, proposalFromReading, userPrompt } from './model'
+import {
+  type ModelReading,
+  mentioned,
+  mergeProposals,
+  proposalFromReading,
+  userPrompt,
+} from './model'
 import { extractWithRules } from './rules'
 import type { ExtractContext } from './types'
 
@@ -113,10 +119,38 @@ describe('mergeProposals', () => {
 })
 
 describe('userPrompt', () => {
-  it('names her, lists the known candidates, and fences the paste', () => {
-    const text = userPrompt('hello', ctx)
+  it('names her, lists the candidates the paste mentions, and fences the paste', () => {
+    const text = userPrompt('hello from Priya', ctx)
     expect(text).toContain('Recruiter: Rae Lin <rae@example.com>')
     expect(text).toContain('"id":"c-priya"')
-    expect(text).toContain('"""\nhello\n"""')
+    expect(text).toContain('"""\nhello from Priya\n"""')
+  })
+})
+
+describe('mentioned', () => {
+  const roster = [
+    { id: 'a', name: 'Priya Raman', role: '', contacts: ['priya@example.com'], links: [] },
+    { id: 'b', name: 'Omar Haddad', role: '', contacts: ['+15550100163'], links: [] },
+    {
+      id: 'c',
+      name: 'Lena Fischer',
+      role: '',
+      contacts: [],
+      links: ['https://github.com/ex-lena/app'],
+    },
+    { id: 'd', name: 'Mei Tanaka', role: '', contacts: [], links: [] },
+  ]
+
+  it('sends only the candidates the paste names or shares a contact or link with', () => {
+    const paste = 'from priya@example.com, cc (555) 010-0163, see github.com/ex-lena/app'
+    expect(mentioned(paste, roster).map((c) => c.id)).toEqual(['a', 'b', 'c'])
+    expect(mentioned('hi, it is Mei', roster).map((c) => c.id)).toEqual(['d'])
+  })
+
+  it('sends none for a paste that mentions nobody', () => {
+    expect(mentioned('thanks, talk soon', roster)).toEqual([])
+    expect(userPrompt('thanks, talk soon', { ...ctx, candidates: roster })).toContain(
+      'Known candidates: []',
+    )
   })
 })

@@ -83,8 +83,10 @@ export async function readWithModel(
       type: 'json_schema',
       json_schema: { name: 'reading', strict: true, schema: READING_SCHEMA },
     },
-    // Only providers that do not store or train on requests (D6).
-    provider: { data_collection: 'deny', require_parameters: true },
+    // Only endpoints with zero data retention, which also never train on requests (D6).
+    provider: { zdr: true, data_collection: 'deny', require_parameters: true },
+    // A ceiling on output and reasoning tokens, so one paste cannot run up a bill (D13).
+    max_tokens: 1000,
     usage: { include: true },
   })) as {
     choices?: Array<{ message?: { content?: string } }>
@@ -130,6 +132,8 @@ export async function classifyWithJev(
   }
   const json = (await post(call, '/systemone', {
     model: call.model,
+    // The same zero-retention demand. If TypeSafe cannot meet it, the call fails and Jev is out (D17).
+    provider: { zdr: true, data_collection: 'deny' },
     state: `Recruiter: ${ctx.self?.name ?? 'unknown'}\n\n${paste}`,
     questions: {
       needs_reply: {
