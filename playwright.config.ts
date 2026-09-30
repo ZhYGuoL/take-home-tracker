@@ -20,7 +20,7 @@ export default defineConfig({
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
-    { name: 'phone', use: { ...devices['Pixel 7'] } },
+    { name: 'iphone', use: { ...devices['iPhone 15'] } },
   ],
   webServer: {
     command: `vite build --mode e2e && vite preview --mode e2e --port ${PORT} --strictPort`,
