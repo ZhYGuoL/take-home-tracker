@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.wrangler/
+*.tsbuildinfo
+
+# local secrets and env files
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# test output
+test-results/
+playwright-report/
+coverage/
+eval/results/*.local.json
+
+# editor and OS
+.DS_Store
+.vscode/
+.idea/
+*.log
