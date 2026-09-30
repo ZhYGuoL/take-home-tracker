@@ -54,6 +54,19 @@ describe('validateDraft', () => {
 })
 
 describe('candidateFromDraft', () => {
+  it('a sent date with no time is noon, or now when noon is still ahead today', () => {
+    // It is 10:05 in Los Angeles.
+    const today = candidateFromDraft(draft({ sentDate: '2026-09-30', sentTime: '' }), LA, base, now)
+    expect(today.sentAt).toBe('2026-09-30T17:05:00.000Z')
+    const earlier = candidateFromDraft(
+      draft({ sentDate: '2026-09-28', sentTime: '' }),
+      LA,
+      base,
+      now,
+    )
+    expect(earlier.sentAt).toBe('2026-09-28T19:00:00.000Z')
+  })
+
   it('reads the deadline in its own zone, not her zone', () => {
     const c = candidateFromDraft(
       draft({ dueDate: '2026-10-02', dueTime: '17:00', dueZone: 'America/New_York' }),

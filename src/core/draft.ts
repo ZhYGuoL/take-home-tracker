@@ -111,10 +111,17 @@ export function validateDraft(d: CandidateDraft, at: { zone: string; now: number
   return errors
 }
 
-/** The instant of a date and an optional time in `zone`. A missing time means noon, which only the sent time can have. */
+/** The instant of a date and an optional time in `zone`. A missing time means noon. */
 function instantOf(date: string, time: string, zone: string): string | null {
   if (!date) return null
   return instantIn(date, time || '12:00', zone)
+}
+
+/** When the take-home went out. A date with no time is noon, but never later than now. */
+function sentInstant(date: string, time: string, zone: string, now: number): string | null {
+  const at = instantOf(date, time, zone)
+  if (!at || time || Date.parse(at) <= now) return at
+  return new Date(now).toISOString()
 }
 
 /**
@@ -126,6 +133,7 @@ export function candidateFromDraft(
   d: CandidateDraft,
   zone: string,
   base: Pick<Candidate, 'id' | 'createdAt'> & Partial<Candidate>,
+  now: number = Date.now(),
 ): Candidate {
   const before = base.name !== undefined ? draftFromCandidate(base as Candidate, zone) : null
   const sentSame = before && before.sentDate === d.sentDate && before.sentTime === d.sentTime
@@ -142,7 +150,7 @@ export function candidateFromDraft(
     source: d.source,
     contacts: parseContacts(d.contacts),
     takeHomeUrl: optionalUrl(d.takeHomeUrl) ?? '',
-    sentAt: sentSame ? (base.sentAt ?? null) : instantOf(d.sentDate, d.sentTime, zone),
+    sentAt: sentSame ? (base.sentAt ?? null) : sentInstant(d.sentDate, d.sentTime, zone, now),
     deadline: dueSame
       ? (base.deadline ?? null)
       : d.dueDate
