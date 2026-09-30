@@ -1,0 +1,91 @@
+import { normalizeUrl } from '../links'
+import type { Link, LinkKind } from '../types'
+
+/**
+ * The part of a paste that the sender wrote: quoted lines (">") and everything after an
+ * "On ... wrote:" line are someone else's words, usually hers.
+ */
+export function ownText(paste: string): string {
+  const out: string[] = []
+  for (const line of paste.replace(/\r\n?/g, '\n').split('\n')) {
+    if (/^On .{6,120} wrote:\s*$/.test(line.trim())) break
+    if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(line.trim())) break
+    if (line.trimStart().startsWith('>')) continue
+    out.push(line)
+  }
+  return out.join('\n').trim()
+}
+
+// A web address with a scheme, or a bare host with a common suffix, such as github.com/x/y.
+const URL_RE =
+  /(?<![@\w.-])(?:https?:\/\/[^\s<>"'`]+|(?:[a-z0-9-]+\.)+(?:com|dev|io|app|net|org|co|ai|so|sh|me|site|page|xyz|tech|ly)(?:\/[^\s<>"'`]*)?)/gi
+
+export function findUrls(text: string): string[] {
+  const out: string[] = []
+  for (const m of text.matchAll(URL_RE)) {
+    const raw = m[0].replace(/[.,;:!?)\]}'"]+$/, '')
+    // A closing parenthesis inside the link stays when the link opened one.
+    const balanced = raw.includes('(') && m[0].endsWith(')') ? `${raw})` : raw
+    const url = normalizeUrl(balanced)
+    if (url && !out.includes(url)) out.push(url)
+  }
+  return out
+}
+
+/** Text with every web address removed, so a "?" in a query string is not a question. */
+export function withoutUrls(text: string): string {
+  return text.replace(URL_RE, ' ')
+}
+
+const REPO_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org', 'codeberg.org']
+const DOC_HOSTS = ['docs.google.com', 'drive.google.com', 'notion.so', 'notion.site', 'coda.io']
+const DEPLOY_SUFFIXES = [
+  'vercel.app',
+  'netlify.app',
+  'pages.dev',
+  'workers.dev',
+  'fly.dev',
+  'onrender.com',
+  'herokuapp.com',
+  'railway.app',
+  'github.io',
+  'replit.app',
+  'repl.co',
+  'surge.sh',
+  'web.app',
+  'firebaseapp.com',
+  'deno.dev',
+  'glitch.me',
+  'streamlit.app',
+]
+const VIDEO_HOSTS = ['loom.com', 'youtu.be', 'youtube.com', 'vimeo.com']
+
+const hostOf = (url: string) => new URL(url).hostname.replace(/^www\./, '')
+const isOn = (host: string, suffix: string) => host === suffix || host.endsWith(`.${suffix}`)
+
+/**
+ * What a link is. A link on a known host decides by host. A link on any other host is a
+ * submission when the sender says it is done or live, and "other" otherwise.
+ */
+export function linkKind(url: string, context: string): LinkKind {
+  const host = hostOf(url)
+  const path = new URL(url).pathname.split('/').filter(Boolean)
+  if (REPO_HOSTS.some((h) => isOn(host, h))) return path.length >= 2 ? 'repo' : 'other'
+  if (DOC_HOSTS.some((h) => isOn(host, h))) return 'doc'
+  if (DEPLOY_SUFFIXES.some((s) => isOn(host, s))) return 'submission'
+  if (VIDEO_HOSTS.some((h) => isOn(host, h))) return 'submission'
+  if (/^(docs|developer|developers|api)\./.test(host) || path[0] === 'docs') return 'other'
+  return /\b(done|live|deployed|submission|submitted|finished|shipped|here it is|built)\b/i.test(
+    context,
+  )
+    ? 'submission'
+    : 'other'
+}
+
+export function findLinks(text: string): Link[] {
+  return findUrls(text).map((url) => ({ url, kind: linkKind(url, text) }))
+}
+
+export function lines(text: string): string[] {
+  return text.split('\n').map((l) => l.trim())
+}
