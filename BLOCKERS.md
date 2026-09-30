@@ -100,6 +100,16 @@ Until then, `pnpm dev` and the tests use a local fake Google, and a deployed cop
 8. Optional, only after B2: set the three model secrets in B2, step 6.
    The secrets take effect at once, with no new deploy.
 
+## B5. A public GitHub repo (after B1)
+
+**What.** The repo has no remote, and nothing is pushed. The run may not create either.
+
+**Steps.**
+1. Decide B1 first.
+2. Create an empty repo under `ZhYGuoL`, for example `take-home-tracker`.
+3. `git remote add origin git@github.com:ZhYGuoL/take-home-tracker.git`
+4. `git push -u origin main`
+
 ## B6. Check F10 on a real copy (after B3 and B4)
 
 **What.** F10 in `features.json` says "A new person can get their own working copy by following the README."
@@ -113,13 +123,3 @@ Everything the run can check is checked: a fresh clone installs and runs with `p
 2. Check that the second account sees an empty list, and that its own "Take-home tracker" Sheet appears in its Drive.
 3. If you want, follow "Run your own copy" too, with a new Cloudflare account and Google project.
 4. If the steps work, set F10 to `"passes": true` in `features.json`.
-
-## B5. A public GitHub repo (after B1)
-
-**What.** The repo has no remote, and nothing is pushed. The run may not create either.
-
-**Steps.**
-1. Decide B1 first.
-2. Create an empty repo under `ZhYGuoL`, for example `take-home-tracker`.
-3. `git remote add origin git@github.com:ZhYGuoL/take-home-tracker.git`
-4. `git push -u origin main`
