@@ -7,11 +7,26 @@ import type { Link, LinkKind } from '../types'
  */
 export function ownText(paste: string): string {
   const out: string[] = []
-  for (const line of paste.replace(/\r\n?/g, '\n').split('\n')) {
-    if (/^On .{6,120} wrote:\s*$/.test(line.trim())) break
-    if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(line.trim())) break
-    if (line.trimStart().startsWith('>')) continue
-    out.push(line)
+  const all = paste.replace(/\r\n?/g, '\n').split('\n')
+  for (let i = 0; i < all.length; i++) {
+    const line = (all[i] ?? '').trim()
+    const next = (all[i + 1] ?? '').trim()
+    if (/^On .{6,160} wrote:$/.test(line)) break
+    // Gmail can wrap "On ... wrote:" over two lines.
+    if (/^On .{6,120}$/.test(line) && /wrote:$/.test(next)) break
+    if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(line)) break
+    if (/^_{10,}$/.test(line)) break
+    // Outlook quotes an earlier message under its own "From:" and "Sent:" lines. A forwarded
+    // message also has "From:" lines, but it is the content, so it stays.
+    const before =
+      out
+        .filter((l) => l.trim())
+        .at(-1)
+        ?.trim() ?? ''
+    const forwarded = /forwarded message|^begin forwarded/i.test(before)
+    if (before && !forwarded && /^From:\s.+/.test(line) && /^Sent:/.test(next)) break
+    if (line.startsWith('>')) continue
+    out.push(all[i] ?? '')
   }
   return out.join('\n').trim()
 }

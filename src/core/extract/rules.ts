@@ -19,6 +19,8 @@ interface Head {
   subject: string
   /** The message text under the headers. */
   body: string
+  /** The headers show she sent it, even without knowing who she is. */
+  fromSelf: boolean
 }
 
 const NAME_WORD = String.raw`[\p{Lu}][\p{L}'’-]*`
@@ -51,6 +53,7 @@ function head(overrides: Partial<Head>): Head {
     source: null,
     subject: '',
     body: '',
+    fromSelf: false,
     ...overrides,
   }
 }
@@ -101,6 +104,8 @@ function gmailWeb(all: string[], now: string, zone: string): Head | null {
     return head({
       sender: clean(m[1] ?? '') || null,
       senderEmail: m[2] ?? null,
+      // Gmail shows "to me" on mail she got, and the other person on mail she sent.
+      fromSelf: Boolean(to) && !/^me\b/i.test(to),
       recipient: to && !toEmail && to.toLowerCase() !== 'me' ? to : null,
       recipientEmail: toEmail,
       stamp: parseStamp(when, now, zone) ?? parseClock(when, now, zone),
@@ -365,7 +370,7 @@ const OUTBOUND = [
 ]
 
 function isOutbound(h: Head, own: string, ctx: ExtractContext): boolean {
-  if (isSelfEmail(h.senderEmail, ctx)) return true
+  if (h.fromSelf || isSelfEmail(h.senderEmail, ctx)) return true
   if (h.sender && isSelf(h.sender, ctx)) return true
   if (h.source === 'email' && (h.sender || h.senderEmail)) return false
   // She introduces herself: "It's Jo from Acme".
@@ -452,7 +457,7 @@ export function extractWithRules(paste: string, ctx: ExtractContext): Proposal {
   const name = outbound
     ? (h.recipient ??
       greetedName(own, ctx) ??
-      (h.sender && !isSelf(h.sender, ctx) ? h.sender : null))
+      (h.sender && !h.fromSelf && !isSelf(h.sender, ctx) ? h.sender : null))
     : h.sender && !isSelf(h.sender, ctx)
       ? h.sender
       : senderName(own, ctx)
