@@ -20,7 +20,7 @@ import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
 import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
-import { useSession, useSyncStatus } from './store/session-context'
+import { type SignOutResult, useSession, useSyncStatus } from './store/session-context'
 
 const extract = makeExtractor()
 
@@ -191,24 +191,42 @@ export function App() {
   )
 }
 
-/** Sign-out asks first when saves did not reach her Sheet, since signing out drops them. */
-function SignOut({ signOut }: { signOut: (force?: boolean) => Promise<number> }) {
-  const [unsent, setUnsent] = useState(0)
-  if (unsent > 0) {
+/**
+ * Sign-out asks first when saves did not reach her Sheet, since signing out drops them. If the
+ * server cannot be reached, she stays signed in and can try again.
+ */
+function SignOut({ signOut }: { signOut: (force?: boolean) => Promise<SignOutResult> }) {
+  const [state, setState] = useState<{ unsent: number } | { offline: true; force: boolean }>()
+  const run = async (force: boolean) => {
+    const result = await signOut(force)
+    setState('done' in result ? undefined : 'offline' in result ? { offline: true, force } : result)
+  }
+  if (state && 'offline' in state) {
     return (
       <span className="foot-confirm" role="alert">
-        {unsent === 1 ? '1 change is' : `${unsent} changes are`} not in your Google Sheet yet.
-        <button type="button" className="text-button strong" onClick={() => void signOut(true)}>
+        Could not reach the server, so you are still signed in.
+        <button type="button" className="text-button strong" onClick={() => void run(state.force)}>
+          Try again
+        </button>
+      </span>
+    )
+  }
+  if (state && state.unsent > 0) {
+    return (
+      <span className="foot-confirm" role="alert">
+        {state.unsent === 1 ? '1 change is' : `${state.unsent} changes are`} not in your Google
+        Sheet yet.
+        <button type="button" className="text-button strong" onClick={() => void run(true)}>
           Sign out and lose them
         </button>
-        <button type="button" className="text-button" onClick={() => setUnsent(0)}>
+        <button type="button" className="text-button" onClick={() => setState(undefined)}>
           Stay signed in
         </button>
       </span>
     )
   }
   return (
-    <button type="button" className="text-button" onClick={async () => setUnsent(await signOut())}>
+    <button type="button" className="text-button" onClick={() => void run(false)}>
       Sign out
     </button>
   )

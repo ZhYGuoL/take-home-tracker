@@ -9,7 +9,7 @@ import { viewerZone } from './lib/time'
 import { fetchSession, googleAccess, signOut } from './session'
 import { RepoProvider } from './store/context'
 import { Repo } from './store/repo'
-import { SessionProvider } from './store/session-context'
+import { SessionProvider, type SignOutResult } from './store/session-context'
 import { localCache, SheetSync } from './sync/engine'
 import { SheetsApi } from './sync/sheets'
 
@@ -39,17 +39,22 @@ async function boot() {
   const value = {
     user: session.user,
     sync,
-    async signOut(force = false) {
+    async signOut(force = false): Promise<SignOutResult> {
       if (!force) {
         await sync.push()
-        const unsent = (await cache.pending()).length
-        if (unsent > 0) return unsent
+        const unsent = await sync.unsent()
+        if (unsent > 0) return { unsent }
       }
+      // The server ends the session first. If it cannot be reached, nothing changes here.
+      const ended = await signOut().then(
+        () => true,
+        () => false,
+      )
+      if (!ended) return { offline: true }
       // This browser forgets her data too, so the next person on it sees nothing of hers.
-      await signOut()
       await cache.clear()
       window.location.assign('/')
-      return 0
+      return { done: true }
     },
   }
   root.render(

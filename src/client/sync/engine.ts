@@ -110,6 +110,11 @@ export class SheetSync implements Persistence {
     void this.push()
   }
 
+  /** How many saves have not reached the Sheet, after every save in progress is written here. */
+  unsent(): Promise<number> {
+    return this.serial(async () => (await this.cache.pending()).length)
+  }
+
   async forget(ids: string[]): Promise<void> {
     if (ids.length === 0) return
     const gone = new Set(ids)

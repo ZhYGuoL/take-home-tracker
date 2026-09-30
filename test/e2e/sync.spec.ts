@@ -170,6 +170,27 @@ test.describe('signing out', () => {
     await expect(page.getByRole('button', { name: 'Unsent Uri' })).toBeVisible()
   })
 
+  test('signing out while the server cannot be reached keeps her signed in, and says so', async ({
+    page,
+  }) => {
+    await signInAs(page, 'Casey Nguyen')
+    await expect.poll(async () => (await sheetsOf(page, 'fake-casey')).length).toBe(1)
+    await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())
+    await page.route('**/auth/logout', (route) => route.abort())
+    await addCandidate(page, { name: 'Still Here' })
+    await page.getByRole('button', { name: 'Close' }).click()
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await page.getByRole('button', { name: 'Sign out and lose them' }).click()
+    const footer = page.getByRole('contentinfo')
+    await expect(footer).toContainText('Could not reach the server, so you are still signed in.')
+    await page.getByRole('radio', { name: /All/ }).click()
+    await expect(page.getByRole('button', { name: 'Still Here' })).toBeVisible()
+    // Back online, Try again finishes the sign-out.
+    await page.unroute('**/auth/logout')
+    await footer.getByRole('button', { name: 'Try again' }).click()
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible()
+  })
+
   test('she can still sign out and let unsent saves go', async ({ page }) => {
     await signInAs(page, 'Casey Nguyen')
     await page.route(`${FAKE_GOOGLE_URL}/**`, (route) => route.abort())

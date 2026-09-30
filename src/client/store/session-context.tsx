@@ -11,10 +11,12 @@ export interface SessionValue {
   }
   /**
    * Sends what is unsent, then signs out. If saves still did not reach her Sheet, it does not
-   * sign out and returns how many, unless `force`.
+   * sign out and says how many, unless `force`. Offline, it changes nothing and says so.
    */
-  signOut: (force?: boolean) => Promise<number>
+  signOut: (force?: boolean) => Promise<SignOutResult>
 }
+
+export type SignOutResult = { unsent: number } | { offline: true } | { done: true }
 
 const SessionContext = createContext<SessionValue | null>(null)
 

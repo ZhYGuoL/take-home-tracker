@@ -40,6 +40,8 @@ export function googleAccess(first: Session, fetcher: typeof fetch = fetch): Goo
   }
 }
 
+/** Ends the session on the server. Throws when the server cannot be reached. */
 export async function signOut(fetcher: typeof fetch = fetch) {
-  await fetcher('/auth/logout', { method: 'POST', credentials: 'same-origin' })
+  const res = await fetcher('/auth/logout', { method: 'POST', credentials: 'same-origin' })
+  if (!res.ok) throw new Error(`logout ${res.status}`)
 }
