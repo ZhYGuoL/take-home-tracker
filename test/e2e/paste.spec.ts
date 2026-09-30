@@ -276,6 +276,19 @@ here it is: https://github.com/ex-praman/ledgerline`,
   const sam = page.getByRole('dialog', { name: 'Sam Okafor' })
   await expect(sam).toContainText('sam.okafor@example.com')
   await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+  // The reload below reads her Sheet, so wait until the move is there, as it would be for her.
+  await expect
+    .poll(async () => {
+      const sheets = (await (
+        await page.request.get(`${FAKE_GOOGLE_URL}/__sheets`)
+      ).json()) as Array<{
+        tabs: Record<string, string[][]>
+      }>
+      return (sheets[0]?.tabs.records ?? []).some(
+        (r) => r[1] === 'candidate' && r[4]?.includes('"name":"Sam Okafor"'),
+      )
+    })
+    .toBe(true)
   await page.goto(`/?view=all&c=${priya.id}`)
   await expect(page.getByRole('dialog', { name: 'Priya Raman' })).toBeVisible()
   await expect(page.getByRole('dialog', { name: 'Priya Raman' })).not.toContainText('sam.okafor')
