@@ -304,3 +304,18 @@ A blind set is the closest thing to real pastes that the run can make without re
 
 **Rejected: one set for both.**
 The rules scored 37 of 38 on direction and every other field correct on the development set, which is not a believable accuracy.
+
+## D15. Zone math uses Intl only
+
+**Choice.** `src/core/zone.ts` converts between instants and wall clocks with `Intl.DateTimeFormat` only.
+It never subclasses `Date` and never reads the machine's zone.
+- In the hour that clocks skip, a time moves forward by the skipped length.
+- In the hour that repeats, a time means the first of the two instants.
+- Unit tests run with the system zone set to `Pacific/Chatham` (+12:45, with daylight saving), so code that leans on the machine zone fails.
+
+**Reason.** The first version used `@date-fns/tz`, which subclasses `Date`.
+Under a test clock that replaces `Date`, it read "5pm ET" as 2 PM.
+The unit tests passed only because this Mac is in New York.
+
+**Rejected: keep `@date-fns/tz` and avoid the test clock.**
+The bug class would stay, and deadline boundary tests need a controlled clock.
