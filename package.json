@@ -21,7 +21,8 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "deploy": "vite build && node scripts/check-prod-bundle.ts && wrangler deploy --config dist/take_home_tracker/wrangler.json",
     "eval": "tsx eval/run.ts",
-    "dev:app": "vite"
+    "dev:app": "vite",
+    "demo": "tsx scripts/demo-seed.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

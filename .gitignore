@@ -32,3 +32,4 @@ BRIEF.md
 
 # local scratch scripts
 *.tmp.*
+.qa/
