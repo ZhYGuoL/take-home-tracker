@@ -79,15 +79,14 @@ export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Pro
     if (!paste.trim() || reading) return
     setReading(true)
     const now = Date.now()
-    const p = await extract(paste, {
-      now: new Date(now).toISOString(),
-      zone,
-      candidates: known,
-      self,
-    })
-    setReading(false)
-    setMatchVia(p.match ? { id: p.match.id, via: p.match.via } : null)
-    setDraft(pasteDraft(p, paste, zone, now, lastSource()))
+    const ctx = { now: new Date(now).toISOString(), zone, candidates: known, self }
+    try {
+      const p = await extract(paste, ctx)
+      setMatchVia(p.match ? { id: p.match.id, via: p.match.via } : null)
+      setDraft(pasteDraft(p, paste, zone, now, lastSource()))
+    } finally {
+      setReading(false)
+    }
   }
 
   if (!draft) {
@@ -217,7 +216,7 @@ function Confirm({
     <form className="form" onSubmit={submit} noValidate>
       <div className="form-body thin-scroll">
         <fieldset>
-          <legend>CANDIDATE</legend>
+          <legend className="visually-hidden">Attach</legend>
           <Field label="Attach to">
             <select value={draft.target} onChange={(e) => set({ target: e.target.value })}>
               <option value="new">New candidate</option>
