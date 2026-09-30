@@ -38,7 +38,11 @@ export class SheetSync implements Persistence {
   private status: SyncStatus = 'synced'
   private listeners = new Set<() => void>()
   private sheet: Promise<Spreadsheet> | null = null
-  private queue: Promise<void> = Promise.resolve()
+  /** Every change to the pending queue runs in this chain, one at a time. */
+  private queue: Promise<unknown> = Promise.resolve()
+  /** Rows sent while a pull was reading, which that pull's snapshot may not have. */
+  private sentDuringPull: StoredRecord[] = []
+  private pulls = 0
   private purge = new Set<string>()
   private viewTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -75,19 +79,21 @@ export class SheetSync implements Persistence {
     return [...mergeRecords(byId(cached), pending).values()]
   }
 
+  private serial<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.queue.catch(() => undefined).then(fn)
+    this.queue = run
+    return run
+  }
+
   async save(changed: StoredRecord[]): Promise<void> {
     // Local durability first. This is what "saved" means on this device.
-    const run = this.queue
-      .catch(() => undefined)
-      .then(async () => {
-        const pending = await this.cache.pending()
-        await this.cache.setPending([...mergeRecords(byId(pending), changed).values()])
-        const cached = await this.cache.records()
-        await this.cache.setRecords([...mergeRecords(byId(cached), changed).values()])
-      })
-    this.queue = run
+    await this.serial(async () => {
+      const pending = await this.cache.pending()
+      await this.cache.setPending([...mergeRecords(byId(pending), changed).values()])
+      const cached = await this.cache.records()
+      await this.cache.setRecords([...mergeRecords(byId(cached), changed).values()])
+    })
     for (const r of changed) if (r.deleted && r.type === 'candidate') this.purge.add(r.id)
-    await run
     void this.push()
   }
 
@@ -106,30 +112,52 @@ export class SheetSync implements Persistence {
   }
 
   private pushing: Promise<void> | null = null
+  private again = false
 
-  /** Sends what is pending. Safe to call often: one push runs at a time. */
+  /**
+   * Sends what is pending. Safe to call often: one push runs at a time, and a call made
+   * during a push makes it run once more, so a save made meanwhile goes out too.
+   */
   push(): Promise<void> {
-    this.pushing ??= this.pushOnce().finally(() => {
-      this.pushing = null
-    })
+    if (this.pushing) {
+      this.again = true
+      return this.pushing
+    }
+    this.pushing = (async () => {
+      try {
+        do {
+          this.again = false
+          await this.pushOnce()
+        } while (this.again && this.status !== 'offline')
+      } finally {
+        this.pushing = null
+      }
+    })()
     return this.pushing
   }
 
   private async pushOnce(): Promise<void> {
-    const pending = await this.cache.pending()
+    let pending = await this.cache.pending()
     if (pending.length === 0 && this.purge.size === 0) return
     this.setStatus('syncing')
     try {
       const sheet = await this.spreadsheet()
-      if (pending.length > 0) {
-        await this.api.append(sheet.id, pending.map(toRow))
-        // Only what was sent leaves the queue. A save made meanwhile stays.
-        const sent = byId(pending)
-        const now = await this.cache.pending()
-        await this.cache.setPending(now.filter((r) => sent.get(r.id)?.updatedAt !== r.updatedAt))
+      while (pending.length > 0) {
+        const sending = pending
+        await this.api.append(sheet.id, sending.map(toRow))
+        if (this.pulls > 0) this.sentDuringPull.push(...sending)
+        // Only what was sent leaves the queue. A save made meanwhile stays, and goes next.
+        const sent = byId(sending)
+        pending = await this.serial(async () => {
+          const left = (await this.cache.pending()).filter(
+            (r) => sent.get(r.id)?.updatedAt !== r.updatedAt,
+          )
+          await this.cache.setPending(left)
+          return left
+        })
       }
       if (this.purge.size > 0) await this.purgeRows(sheet)
-      this.setStatus((await this.cache.pending()).length > 0 ? 'syncing' : 'synced')
+      this.setStatus('synced')
       this.scheduleView()
     } catch {
       this.setStatus('offline')
@@ -159,21 +187,26 @@ export class SheetSync implements Persistence {
 
   /** Reads the Sheet and makes it the truth, keeping saves that have not gone out yet. */
   async pull(): Promise<void> {
+    this.pulls++
     try {
       const sheet = await this.spreadsheet()
       await this.push()
+      const mark = this.sentDuringPull.length
       const rows = await this.api.readRows(sheet.id)
       const remote = mergeRecords(
         new Map(),
         rows.flatMap((r) => fromRow(r) ?? []),
       )
-      const all = mergeRecords(remote, await this.cache.pending())
+      const sent = mergeRecords(remote, this.sentDuringPull.slice(mark))
+      const all = mergeRecords(sent, await this.cache.pending())
       const records = [...all.values()]
       await this.cache.setRecords(records)
       this.target?.replaceAll(records)
       this.setStatus((await this.cache.pending()).length > 0 ? 'offline' : 'synced')
     } catch {
       this.setStatus('offline')
+    } finally {
+      if (--this.pulls === 0) this.sentDuringPull = []
     }
   }
 

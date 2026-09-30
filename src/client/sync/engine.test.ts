@@ -107,6 +107,47 @@ describe('SheetSync', () => {
     expect(b.repo.getSnapshot()).toEqual({ candidates: [], entries: [] })
   })
 
+  it('a save made while a push is sending also goes out', async () => {
+    const sheet = memorySheet()
+    const { repo, sync } = device(sheet)
+    const c = candidate({ name: 'Notes Typist' })
+    let release = () => {}
+    const slow = sheet.append
+    sheet.append = async (id, add) => {
+      await new Promise<void>((r) => {
+        release = r
+      })
+      sheet.append = slow
+      await slow(id, add)
+    }
+    await repo.saveCandidate(c)
+    const first = sync.push()
+    await repo.saveCandidate({ ...c, notes: 'second thought' })
+    release()
+    // Nothing else calls push, as when the tab is in the background.
+    await first
+    expect(JSON.stringify(sheet.rows)).toContain('second thought')
+    expect(sync.getStatus()).toBe('synced')
+  })
+
+  it('a save sent while a pull is reading still shows after that pull', async () => {
+    const sheet = memorySheet()
+    const { repo, sync } = device(sheet)
+    const read = sheet.readRows
+    let saving: Promise<void> = Promise.resolve()
+    sheet.readRows = async () => {
+      const before = await read()
+      // The save goes out after the pull read the Sheet, but before the pull finishes.
+      saving = repo.saveCandidate(candidate({ name: 'Mid Pull' })).then(() => sync.push())
+      await saving
+      return before
+    }
+    await sync.pull()
+    sheet.readRows = read
+    await saving
+    expect(repo.getSnapshot().candidates.map((c) => c.name)).toEqual(['Mid Pull'])
+  })
+
   it('a save that has not gone out survives a pull', async () => {
     const sheet = memorySheet()
     const { repo, sync } = device(sheet)
