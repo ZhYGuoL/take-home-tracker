@@ -87,3 +87,21 @@
   - F8: `test/e2e/signin.spec.ts` (a signed-out visitor sees only the way in and the API gives nothing, one user never sees another on the same browser, Drive access), `test/e2e/sync.spec.ts` (sign-out clears the browser), `src/worker/auth.test.ts`, and `src/worker/app.test.ts`.
   - `pnpm verify` exit 0: 349 unit tests, 163 e2e tests, 9 skipped because they apply to only one of the two screen sizes.
 - F7 and F8 pass.
+
+## M6 Design and QA - done
+
+- Every "Done means" item that shows in a browser was checked in Aside Browser (real Chrome) at 1440, 390, and 320 px. `docs/qa/` has 31 screenshots, an index that maps each one to F1 to F9, and the scripts that take them again.
+- The stylesheet follows the design skill: Geist and Geist Mono, 12px text, the token colors, one 120ms fade-in, hover that changes only color or background, and counts on every filter option.
+- Found in the browser and fixed:
+  - A date-only deadline showed as 2:59 AM the next day in another zone. It now reads "end of day PDT".
+  - The open detail panel covered "Not synced" and Retry. It now starts below the header.
+  - The table scrolled sideways by 6 px on a 1280 px screen, and some deadlines wrapped.
+  - At 320 px the stage names overlapped, a due time wrapped, and a long link ran past the edge.
+  - A chat copied as a name line and a time line lost both. A weekday time, such as "Friday 9:14 AM", is now read too.
+  - A message time later than now was saved. Every form now refuses it.
+  - Last activity showed when she added a candidate, not what happened.
+  - Screen readers read counts as "Sent3", and a match readout lost its value.
+- A second review of M5 found concurrent purges that could delete the wrong rows (blocker). A purge now runs alone, under a lock cell in the Sheet (D3). Also fixed from it: a delete on a device that had not pulled, two tracker files after two first visits, a tab renamed while the app is open, sign-out offline, and an emoji split between two cells.
+- The M6 review found that the phone screenshots came from a dirty browser, and that some items had no screenshot. Both are fixed, with new screenshots. Its other findings are fixed too: a date-only sent time later than now, focus on the sign-out question, the "Mark replied" label, mono on prose, and checkbox alignment.
+- The app has an icon and a web manifest for the phone home screen.
+- Evidence: `docs/qa/README.md`. `pnpm verify` exit 0: 365 unit tests, 171 e2e tests, 9 skipped because they apply to only one of the two screen sizes.
