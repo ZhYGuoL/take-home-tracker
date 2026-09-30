@@ -82,13 +82,18 @@ export function DetailPanel({
     })
   }
 
-  const markReplied = () =>
+  // A reply comes after the message it answers, even one she dated in the future by mistake.
+  const markReplied = () => {
+    const latest = entries
+      .filter((e) => e.candidateId === c.id && e.kind === 'message')
+      .reduce((max, e) => Math.max(max, Date.parse(e.at) + 1), 0)
     void repo.saveEntry({
       id: newId(),
       candidateId: c.id,
       kind: 'replied',
-      at: new Date().toISOString(),
+      at: new Date(Math.max(Date.now(), latest)).toISOString(),
     })
+  }
 
   return (
     <>
@@ -284,6 +289,19 @@ function DeleteButton({ name, onConfirm }: { name: string; onConfirm: () => void
   )
 }
 
+/**
+ * The instant of the date and time fields. When she left them as shown, it is the exact
+ * current instant, so two entries saved in the same minute keep their order.
+ */
+function instantOrNow(
+  when: { date: string; time: string },
+  shown: { date: string; time: string },
+  zone: string,
+): string {
+  if (when.date === shown.date && when.time === shown.time) return new Date().toISOString()
+  return instantIn(when.date, when.time, zone)
+}
+
 /** Adds a submission or repo link by hand, with the time it came in. */
 function LinkFields({
   candidate,
@@ -298,6 +316,7 @@ function LinkFields({
   const [url, setUrl] = useState('')
   const [kind, setKind] = useState<LinkKind>('submission')
   const [when, setWhen] = useState(() => localParts(new Date().toISOString(), zone))
+  const [shown] = useState(when)
   const [error, setError] = useState<string | null>(null)
   const [whenError, setWhenError] = useState<string | null>(null)
 
@@ -312,7 +331,7 @@ function LinkFields({
       id: newId(),
       candidateId: candidate.id,
       kind: 'message',
-      at: instantIn(when.date, when.time, zone),
+      at: instantOrNow(when, shown, zone),
       direction: 'in',
       text: '',
       source: candidate.source,
@@ -393,6 +412,7 @@ function MessageFields({
   const [text, setText] = useState('')
   const [needsReply, setNeedsReply] = useState(true)
   const [when, setWhen] = useState(() => localParts(new Date().toISOString(), zone))
+  const [shown] = useState(when)
 
   const [whenError, setWhenError] = useState<string | null>(null)
 
@@ -405,7 +425,7 @@ function MessageFields({
       id: newId(),
       candidateId: candidate.id,
       kind: 'message',
-      at: instantIn(when.date, when.time, zone),
+      at: instantOrNow(when, shown, zone),
       direction,
       text: text.trim(),
       source: candidate.source,

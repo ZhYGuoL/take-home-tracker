@@ -144,3 +144,34 @@ for (const [zone, shown] of [
     })
   })
 }
+
+test.describe('replies logged by hand', () => {
+  test('a question and her answer in the same minute leave nothing waiting', async ({ page }) => {
+    const pia = person('Pia Laurent', { due: ['2026-10-09', '17:00', LA] })
+    await page.clock.install({ time: NOW })
+    await seed(page, [pia])
+    await page.getByRole('radio', { name: /All/ }).click()
+    await page.getByRole('button', { name: 'Pia Laurent' }).click()
+    const detail = page.getByRole('dialog', { name: 'Pia Laurent' })
+    await detail.getByRole('button', { name: 'Add message' }).click()
+    await detail.getByLabel('Message', { exact: true }).fill('Can I use Postgres?')
+    await detail.getByRole('button', { name: 'Add message' }).last().click()
+    await expect(detail.getByText('Needs reply', { exact: true })).toBeVisible()
+    await detail.getByRole('button', { name: 'Add message' }).click()
+    await detail.getByLabel('From').selectOption('out')
+    await detail.getByLabel('Message', { exact: true }).fill('Yes, Postgres is fine.')
+    await detail.getByRole('button', { name: 'Add message' }).last().click()
+    await expect(detail.getByText('Needs reply', { exact: true })).toHaveCount(0)
+  })
+
+  test('Replied clears a question she dated later than now by mistake', async ({ page }) => {
+    const quinn = person('Quinn Adler', { due: ['2026-10-09', '17:00', LA] })
+    await page.clock.install({ time: NOW })
+    await seed(page, [quinn, asked(quinn, '2026-10-05T22:00:00Z')])
+    await page.getByRole('button', { name: 'Quinn Adler' }).click()
+    const detail = page.getByRole('dialog', { name: 'Quinn Adler' })
+    await detail.getByRole('button', { name: 'Replied' }).click()
+    await expect(detail.getByText('Needs reply', { exact: true })).toHaveCount(0)
+    await expect(detail.getByRole('button', { name: 'Replied' })).toHaveCount(0)
+  })
+})

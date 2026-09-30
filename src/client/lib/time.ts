@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { uuidv7Factory } from '../../core/ids'
 
 /** The viewer's own IANA time zone. */
 export const viewerZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -37,4 +38,5 @@ export function useNow(deadlines: readonly number[] = []): number {
   return now
 }
 
-export const newId = (): string => crypto.randomUUID()
+/** Time-ordered ids, so entries saved in the same minute keep their save order. */
+export const newId = uuidv7Factory()
