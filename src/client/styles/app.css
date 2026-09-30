@@ -49,6 +49,11 @@
   min-width: 0;
 }
 
+/* A time that wraps keeps its lines apart. */
+.stack .num {
+  line-height: 16px;
+}
+
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -157,32 +162,35 @@
 
 .table {
   width: 100%;
-  /* The fixed columns take 1020px, so NAME keeps at least 200px before the table scrolls. */
-  min-width: 1220px;
+  /* The fixed columns take 1004px, so NAME keeps at least 200px before the table scrolls.
+     1204px fits the page column on a 1280px screen. */
+  min-width: 1204px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
 .col-role {
-  width: 160px;
+  width: 152px;
 }
 .col-stage {
-  width: 112px;
+  width: 104px;
 }
 .col-flags {
+  /* Two flags at most: Overdue and Late never show together. */
   width: 168px;
 }
 .col-deadline {
-  width: 172px;
+  /* "Mon, Sep 28, end of day PDT" on one line. */
+  width: 212px;
 }
 .col-source {
-  width: 88px;
+  width: 80px;
 }
 .col-activity {
-  width: 112px;
+  width: 104px;
 }
 .col-link {
-  width: 208px;
+  width: 184px;
 }
 
 .table th,
@@ -338,8 +346,10 @@
 }
 
 .sheet-drawer {
-  top: 16px;
-  right: 16px;
+  /* Below the header row, and flush with the page column, so the header stays in reach:
+     the page padding (32), the header (36), and the gap (16). It covers the footer whole. */
+  top: 84px;
+  right: max(32px, calc((100vw - 1440px) / 2 + 32px));
   bottom: 16px;
   width: 480px;
 }
