@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `pnpm dev`. Never commit .dev.vars.
+# All of these are optional. Without them, the app runs with the model off.
+OPENROUTER_API_KEY=
+MODEL_ID=

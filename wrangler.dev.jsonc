@@ -8,5 +8,13 @@
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/auth/*"]
+  },
+  // 20 model calls a minute per user (D13).
+  "ratelimits": [
+    { "name": "MODEL_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }
+  ],
+  "vars": {
+    // Comma-separated Google emails that may use the model. Empty keeps it off for everyone (D13).
+    "MODEL_ALLOWED_EMAILS": ""
   }
 }
