@@ -101,3 +101,19 @@ test('the back gesture closes the detail panel', async ({ page }) => {
   await page.goBack()
   await expect(page.getByRole('dialog', { name: 'Ana Costa' })).toBeHidden()
 })
+
+test('opening a second candidate from the list needs one close, not two', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'iphone', 'on a phone the panel covers the list')
+  await addCandidate(page, { name: 'Ana Costa' })
+  await page.getByRole('button', { name: 'Close' }).click()
+  await addCandidate(page, { name: 'Bo Lindgren' })
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(page).not.toHaveURL(/[?&]c=/)
+  await page.getByRole('button', { name: 'Ana Costa' }).click()
+  await page.getByRole('button', { name: 'Bo Lindgren' }).click()
+  await expect(page.getByRole('dialog', { name: 'Bo Lindgren' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})

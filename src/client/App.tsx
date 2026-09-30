@@ -100,7 +100,7 @@ export function App() {
             now={now}
             zone={zone}
             selectedId={openId}
-            onOpen={(id) => navigate({ c: id })}
+            onOpen={(id) => navigate({ c: id }, openId ? 'replace' : 'push')}
             onOpenSubmission={openSubmission}
           />
         )}
