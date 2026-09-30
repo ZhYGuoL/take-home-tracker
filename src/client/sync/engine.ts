@@ -1,5 +1,6 @@
 import { createStore, del, get, set } from 'idb-keyval'
-import { mergeRecords, type StoredRecord } from '../../core/records'
+import { purgePlan } from '../../core/purge'
+import { mergeRecords, type StoredRecord, type Tombstone } from '../../core/records'
 import { fromRow, toRow } from '../../core/rows'
 import type { Persistence } from '../store/repo'
 import type { SheetsApi, Spreadsheet } from './sheets'
@@ -28,6 +29,14 @@ export type LocalCache = ReturnType<typeof localCache>
 const byId = (records: Iterable<StoredRecord>) => new Map([...records].map((r) => [r.id, r]))
 
 /**
+ * The device that deletes a candidate purges its rows at once. Any device purges a delete
+ * older than this, in case that device closed first. The wait keeps two devices from
+ * deleting rows by position at the same moment.
+ */
+const PURGE_AFTER_MS = 10 * 60_000
+const stale = (t: Tombstone) => Date.now() - Date.parse(t.updatedAt) > PURGE_AFTER_MS
+
+/**
  * Keeps the Sheet in her Drive and this browser in step (D3).
  * - A save goes to a pending queue in IndexedDB first, so a closed tab loses nothing.
  * - Pending rows are appended to the Sheet. On failure they stay and are sent again later.
@@ -43,7 +52,6 @@ export class SheetSync implements Persistence {
   /** Rows sent while a pull was reading, which that pull's snapshot may not have. */
   private sentDuringPull: StoredRecord[] = []
   private pulls = 0
-  private purge = new Set<string>()
   private viewTimer: ReturnType<typeof setTimeout> | null = null
 
   private target: { replaceAll(records: StoredRecord[]): void } | null = null
@@ -93,7 +101,6 @@ export class SheetSync implements Persistence {
       const cached = await this.cache.records()
       await this.cache.setRecords([...mergeRecords(byId(cached), changed).values()])
     })
-    for (const r of changed) if (r.deleted && r.type === 'candidate') this.purge.add(r.id)
     void this.push()
   }
 
@@ -138,14 +145,16 @@ export class SheetSync implements Persistence {
 
   private async pushOnce(): Promise<void> {
     let pending = await this.cache.pending()
-    if (pending.length === 0 && this.purge.size === 0) return
+    if (pending.length === 0) return
     this.setStatus('syncing')
     try {
       const sheet = await this.spreadsheet()
+      const deleted = new Set<string>()
       while (pending.length > 0) {
         const sending = pending
         await this.api.append(sheet.id, sending.map(toRow))
         if (this.pulls > 0) this.sentDuringPull.push(...sending)
+        for (const r of sending) if (r.deleted && r.type === 'candidate') deleted.add(r.id)
         // Only what was sent leaves the queue. A save made meanwhile stays, and goes next.
         const sent = byId(sending)
         pending = await this.serial(async () => {
@@ -156,7 +165,10 @@ export class SheetSync implements Persistence {
           return left
         })
       }
-      if (this.purge.size > 0) await this.purgeRows(sheet)
+      if (deleted.size > 0) {
+        const rows = (await this.api.readRows(sheet.id)).map(fromRow)
+        await this.purge(sheet, rows, (t) => deleted.has(t.id) || stale(t))
+      }
       this.setStatus('synced')
       this.scheduleView()
     } catch {
@@ -164,25 +176,19 @@ export class SheetSync implements Persistence {
     }
   }
 
-  /** Deletes every row of a deleted candidate and its entries. */
-  private async purgeRows(sheet: Spreadsheet) {
-    const ids = new Set(this.purge)
-    const rows = await this.api.readRows(sheet.id)
-    const records = rows.map(fromRow)
-    // Entries go with their candidate. Their data names the candidate, and so do their tombstones.
-    const cached = await this.cache.records()
-    const owned = new Set(
-      cached.flatMap((r) =>
-        r.type === 'entry' && !r.deleted && ids.has(r.data.candidateId) ? [r.id] : [],
-      ),
+  /** Deletes the rows a deleted candidate left behind (D3). True if it deleted any. */
+  private async purge(
+    sheet: Spreadsheet,
+    rows: Array<StoredRecord | null>,
+    due: (t: Tombstone) => boolean,
+  ): Promise<boolean> {
+    const plan = purgePlan(rows, due)
+    // Row 0 of the tab is the header, so the first row read is row 1.
+    await this.api.deleteRows(
+      sheet,
+      plan.map((i) => i + 1),
     )
-    for (const r of records) {
-      if (r?.type === 'entry' && !r.deleted && ids.has(r.data.candidateId)) owned.add(r.id)
-    }
-    const doomed = new Set([...ids, ...owned])
-    const indexes = records.flatMap((r, i) => (r && doomed.has(r.id) ? [i + 1] : []))
-    await this.api.deleteRows(sheet, indexes)
-    for (const id of ids) this.purge.delete(id)
+    return plan.length > 0
   }
 
   /** Reads the Sheet and makes it the truth, keeping saves that have not gone out yet. */
@@ -192,10 +198,14 @@ export class SheetSync implements Persistence {
       const sheet = await this.spreadsheet()
       await this.push()
       const mark = this.sentDuringPull.length
-      const rows = await this.api.readRows(sheet.id)
+      let rows = (await this.api.readRows(sheet.id)).map(fromRow)
+      // A delete that its device did not finish purging, for example because the tab closed.
+      if (await this.purge(sheet, rows, stale)) {
+        rows = (await this.api.readRows(sheet.id)).map(fromRow)
+      }
       const remote = mergeRecords(
         new Map(),
-        rows.flatMap((r) => fromRow(r) ?? []),
+        rows.flatMap((r) => r ?? []),
       )
       const sent = mergeRecords(remote, this.sentDuringPull.slice(mark))
       const all = mergeRecords(sent, await this.cache.pending())

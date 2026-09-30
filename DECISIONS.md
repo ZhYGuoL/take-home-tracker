@@ -86,8 +86,15 @@ The spreadsheet has two tabs.
 On each sync, the `records` tab is the truth.
 Local state is the `records` tab plus the saves on this device that did not upload yet.
 
-When the recruiter deletes a candidate, the app deletes every row of that candidate and its entries from `records`.
+When the recruiter deletes a candidate, the app deletes every row with data of that candidate and its entries from `records`.
 So the personal data really goes away, and it is not only hidden.
+- One tombstone row stays: the id, the type, the time, and no data.
+  It stops an older edit from an offline device from bringing the candidate back.
+- An entry that she moved to another candidate keeps its newest row.
+- The device that deletes purges at once.
+  Any device purges a delete that is older than 10 minutes, in case that device closed first.
+  The wait keeps two devices from deleting rows by position at the same moment.
+- The rules are one pure function, `purgePlan` in `src/core/purge.ts`, which reads only the Sheet rows.
 
 A pasted message is at most 20,000 characters.
 A Sheets cell holds at most 50,000.

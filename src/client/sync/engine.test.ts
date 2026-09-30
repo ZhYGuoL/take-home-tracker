@@ -101,10 +101,30 @@ describe('SheetSync', () => {
     expect(b.repo.getSnapshot().candidates).toHaveLength(1)
     await a.repo.deleteCandidate(c)
     await a.sync.push()
-    // Every row of the candidate and its timeline is gone from the Sheet.
-    expect(sheet.rows).toEqual([HEADER])
+    // Every row with data is gone. One tombstone with no data stays, so an older edit from
+    // another device cannot bring the candidate back.
+    expect(sheet.rows).toEqual([HEADER, [c.id, 'candidate', expect.any(String), '1', '']])
     await b.sync.pull()
     expect(b.repo.getSnapshot()).toEqual({ candidates: [], entries: [] })
+  })
+
+  it('deleting a candidate keeps a message that was moved from it to someone else', async () => {
+    const sheet = memorySheet()
+    const { repo, sync } = device(sheet)
+    const wrong = candidate({ name: 'Wrong Person' })
+    const right = candidate({ name: 'Right Person' })
+    const e = submission(wrong, '2026-09-30T10:00:00Z')
+    await repo.saveAll([wrong, right, e])
+    await sync.push()
+    await repo.saveEntry({ ...e, candidateId: right.id })
+    await repo.deleteCandidate(wrong)
+    await sync.push()
+    expect(JSON.stringify(sheet.rows)).not.toContain('Wrong Person')
+    const other = device(sheet)
+    await other.sync.pull()
+    expect(other.repo.getSnapshot().entries.map((x) => [x.id, x.candidateId])).toEqual([
+      [e.id, right.id],
+    ])
   })
 
   it('a save made while a push is sending also goes out', async () => {
@@ -128,6 +148,18 @@ describe('SheetSync', () => {
     await first
     expect(JSON.stringify(sheet.rows)).toContain('second thought')
     expect(sync.getStatus()).toBe('synced')
+  })
+
+  it('a delete that its device never purged is purged by any device ten minutes later', async () => {
+    const sheet = memorySheet()
+    const c = candidate({ name: 'Closed Tab' })
+    sheet.rows.push(
+      [c.id, 'candidate', '2026-09-30T09:00:00.000Z', '', JSON.stringify(c)],
+      [c.id, 'candidate', '2026-09-30T09:01:00.000Z', '1', ''],
+    )
+    const { sync } = device(sheet)
+    await sync.pull()
+    expect(sheet.rows).toEqual([HEADER, [c.id, 'candidate', '2026-09-30T09:01:00.000Z', '1', '']])
   })
 
   it('a save sent while a pull is reading still shows after that pull', async () => {

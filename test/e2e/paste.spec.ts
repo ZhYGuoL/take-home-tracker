@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
 import { expect, rowOf, stageButton, test } from './fixtures'
 import { person, seed } from './seed'
 
@@ -156,6 +157,42 @@ test('a message saved to the wrong candidate moves to the right one in one step'
   await page.getByRole('radio', { name: /All/ }).click()
   await page.getByRole('button', { name: 'Pia Laurent' }).click()
   await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a message moved off the candidate a paste made stays in her Sheet when that candidate goes', async ({
+  page,
+}) => {
+  const rows = async () => {
+    const sheets = (await (await page.request.get(`${FAKE_GOOGLE_URL}/__sheets`)).json()) as Array<{
+      tabs: Record<string, string[][]>
+    }>
+    return sheets[0]?.tabs.records ?? []
+  }
+  const priyaRow = async () =>
+    (await rows()).some((r) => r[1] === 'candidate' && r[4]?.includes('"name":"Priya Raman"'))
+  const messageRow = async () =>
+    (await rows()).some((r) => r[1] === 'entry' && r[4]?.includes('ledgerline-priya'))
+  const pia = person('Pia Laurent')
+  await seed(page, [pia])
+  const dialog = await paste(page, firstEmail)
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  // She notices the wrong match later, after the paste reached her Sheet.
+  await expect.poll(priyaRow).toBe(true)
+  const detail = page.getByRole('dialog', { name: 'Priya Raman' })
+  const item = detail.getByRole('listitem').filter({ hasText: 'ledgerline-priya' })
+  await item.getByRole('button', { name: 'Move', exact: true }).click()
+  await item.getByRole('combobox', { name: 'Move to' }).selectOption({ label: 'Pia Laurent' })
+  // The candidate the paste made has nothing left, so it goes, and its rows leave the Sheet.
+  await expect.poll(priyaRow).toBe(false)
+  expect(await messageRow()).toBe(true)
+
+  await page.reload()
+  // The move opened Pia Laurent, and she is still open after the reload.
+  await expect(page.getByRole('dialog', { name: 'Pia Laurent' })).toBeVisible()
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('radio', { name: /All/ }).click()
+  await expect(page.getByRole('button', { name: 'Priya Raman' })).toHaveCount(0)
 })
 
 test('sending the same take-home doc to a second candidate does not attach to the first', async ({
