@@ -18,8 +18,9 @@ They are still in the git history, and the unattended run may not rewrite histor
 1. If both lines are fine to publish, do nothing.
 2. If not, publish a new history with one commit:
    ```
-   git checkout --orphan public
+   git branch -m main history
+   git checkout --orphan main
    git commit -m "initial public release"
-   git branch -M public main
    ```
-   The dense local history then stays only on this Mac.
+   Push only `main`.
+   The full history stays on the local `history` branch.
