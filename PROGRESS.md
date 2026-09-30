@@ -105,3 +105,34 @@
 - The M6 review found that the phone screenshots came from a dirty browser, and that some items had no screenshot. Both are fixed, with new screenshots. Its other findings are fixed too: a date-only sent time later than now, focus on the sign-out question, the "Mark replied" label, mono on prose, and checkbox alignment.
 - The app has an icon and a web manifest for the phone home screen.
 - Evidence: `docs/qa/README.md`. `pnpm verify` exit 0: 365 unit tests, 171 e2e tests, 9 skipped because they apply to only one of the two screen sizes.
+
+## M7 Ship-ready - done, except what waits on Zhiyuan
+
+- `README.md` has three parts: using the app with no setup, running your own copy, and developing it.
+  A review checked each step against the app, Google, and Cloudflare, and the steps were fixed.
+  For example, Google shows the Drive box unticked, and Node 25 and later no longer include corepack.
+- Deploy configuration: `wrangler.jsonc` is the production Worker on the free plan, with nothing that bills.
+  `pnpm run deploy` builds, checks that the production bundle has no dev or fake-Google code, and deploys with that config only.
+  The dev config has no public address, even if someone deploys it by mistake.
+  Nothing is deployed (B4).
+- Checked without accounts: a fresh clone installs and runs with `pnpm install` and `pnpm dev`.
+  A download with no `.git` folder installs with `npx pnpm@10.18.0 install`.
+- The app has an icon and a web manifest for the phone home screen.
+- No file in the git history holds a key or a real email.
+  The recruiter's first name and one possibly real phone number are in early commits (B1).
+- A browser test that reloaded before a save reached the Sheet failed once under load. It now waits for the Sheet.
+- F10 stays `false`: only a real deployed copy shows that the README works end to end (B6).
+- Evidence: `README.md`, `wrangler.jsonc`, `scripts/check-prod-bundle.ts`, `BLOCKERS.md`.
+  `pnpm verify` exit 0: 365 unit tests, 171 e2e tests, 9 skipped because they apply to only one of the two screen sizes.
+
+## What waits on Zhiyuan
+
+Every remaining item is in `BLOCKERS.md`:
+- B1: decide about the early git history before the repo goes public.
+- B2: a model key, to measure the models and maybe turn one on.
+- B3: a Google OAuth client, so real sign-in works.
+- B4: deploy a copy.
+- B5: a public GitHub repo.
+- B6: check F10 on a real copy, and check sign-in from the iPhone Home Screen.
+
+STATUS: BLOCKED
