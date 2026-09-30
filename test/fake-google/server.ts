@@ -239,11 +239,22 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (!person) return send(res, 401, { error: { code: 401 } }, origin)
     const q = url.searchParams.get('q') ?? ''
     const want = /appProperties has \{ key='([^']+)' and value='([^']+)' \}/.exec(q)
+    const named = /name = '([^']+)'/.exec(q)
     const files = [...state.sheets.values()]
       .filter((s) => s.owner === person.sub)
-      .filter((s) => !want || s.appProperties[want[1] ?? ''] === want[2])
+      .filter(
+        (s) =>
+          (!want && !named) ||
+          (want && s.appProperties[want[1] ?? ''] === want[2]) ||
+          (named && s.title === named[1]),
+      )
       .sort((a, b) => a.createdTime.localeCompare(b.createdTime))
-      .map((s) => ({ id: s.id, name: s.title, createdTime: s.createdTime }))
+      .map((s) => ({
+        id: s.id,
+        name: s.title,
+        createdTime: s.createdTime,
+        appProperties: s.appProperties,
+      }))
     return send(res, 200, { files }, origin)
   }
   const driveFile = /^\/drive\/v3\/files\/([^/]+)$/.exec(path)
@@ -261,12 +272,20 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (!person) return send(res, 401, { error: { code: 401 } }, origin)
     const body = JSON.parse(await readBody(req)) as {
       properties?: { title?: string }
-      sheets?: Array<{ properties?: { title?: string } }>
+      sheets?: Array<{
+        properties?: { title?: string }
+        data?: Array<{
+          rowData?: Array<{ values?: Array<{ userEnteredValue?: { stringValue?: string } }> }>
+        }>
+      }>
     }
     const id = `sheet-${++state.seq}-${randomBytes(4).toString('hex')}`
     const tabs = new Map<string, string[][]>()
     for (const s of body.sheets ?? [{ properties: { title: 'Sheet1' } }]) {
-      tabs.set(s.properties?.title ?? 'Sheet1', [])
+      const rows = (s.data?.[0]?.rowData ?? []).map((r) =>
+        (r.values ?? []).map((v) => v.userEnteredValue?.stringValue ?? ''),
+      )
+      tabs.set(s.properties?.title ?? 'Sheet1', rows)
     }
     state.sheets.set(id, {
       id,

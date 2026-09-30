@@ -16,6 +16,7 @@ export class GoogleError extends Error {
 
 export const TITLE = 'Take-home tracker'
 const PROPERTY = "appProperties has { key='takeHomeTracker' and value='records-v1' }"
+const SHEET_TYPE = 'application/vnd.google-apps.spreadsheet'
 const RECORDS = 'records'
 const VIEW = 'candidates'
 
@@ -55,23 +56,44 @@ export class SheetsApi {
    * `drive.file` lets the app see only files it made (D4).
    */
   async findOrCreate(): Promise<Spreadsheet> {
-    const list = await this.call<{ files?: Array<{ id: string }> }>(
-      `${this.access.drive}/drive/v3/files?q=${q(`${PROPERTY} and trashed=false`)}&orderBy=createdTime&fields=${q('files(id,createdTime)')}`,
+    // Also look by name, in case an earlier attempt made the file but failed to label it.
+    const query = `(${PROPERTY} or name = '${TITLE}') and mimeType = '${SHEET_TYPE}' and trashed = false`
+    const list = await this.call<{
+      files?: Array<{ id: string; appProperties?: Record<string, string> }>
+    }>(
+      `${this.access.drive}/drive/v3/files?q=${q(query)}&orderBy=createdTime&fields=${q('files(id,createdTime,appProperties)')}`,
     )
-    let id = list.files?.[0]?.id
+    const labeled = list.files?.find((f) => f.appProperties?.takeHomeTracker === 'records-v1')
+    let id = labeled?.id ?? list.files?.[0]?.id
     if (!id) {
+      // The header row comes with the new file, so a failure later cannot leave a file without it.
       const made = await this.call<{ spreadsheetId: string }>(
         `${this.access.sheets}/v4/spreadsheets`,
         {
           method: 'POST',
           body: JSON.stringify({
             properties: { title: TITLE },
-            sheets: [{ properties: { title: RECORDS } }, { properties: { title: VIEW } }],
+            sheets: [
+              {
+                properties: { title: RECORDS },
+                data: [
+                  {
+                    startRow: 0,
+                    startColumn: 0,
+                    rowData: [
+                      { values: HEADER.map((v) => ({ userEnteredValue: { stringValue: v } })) },
+                    ],
+                  },
+                ],
+              },
+              { properties: { title: VIEW } },
+            ],
           }),
         },
       )
       id = made.spreadsheetId
-      await this.append(id, [HEADER])
+    }
+    if (!labeled) {
       await this.call(`${this.access.drive}/drive/v3/files/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ appProperties: { takeHomeTracker: 'records-v1' } }),
