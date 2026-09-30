@@ -147,7 +147,7 @@ It serves the account chooser, the token and revoke endpoints, and the Sheets an
 - `vite build` makes the production entry by default.
   Only the dev server, preview, and `--mode e2e` use the dev entry.
   Any other mode fails.
-- `pnpm deploy` builds the production entry and deploys it with an explicit config path.
+- `pnpm run deploy` builds the production entry and deploys it with an explicit config path.
   It does not use the file that the Vite plugin writes after each build, which can point at the last e2e build.
 - `scripts/check-prod-bundle.ts` runs at the end of `pnpm verify` and before every deploy.
   It fails if the production bundle contains the dev entry marker or a fake Google reference.
