@@ -334,10 +334,15 @@ The bug class would stay, and deadline boundary tests need a controlled clock.
 - Code reads those two phrases with the same date reader the rules use (`when.ts`), in her zone.
   The model never computes a date or an offset.
 - Code drops any link, contact, timestamp, or candidate id that is not in the paste or the known list.
+  A name or role counts only if every word of it is in the paste.
   An invented value cannot reach her.
+- A candidate the model picks is a strong match only if the paste shares evidence with that candidate: a contact, a link, a repo owner, or the full name.
+  Otherwise it is weak, like a first-name match from the rules, and it does not attach by default.
 - The client merges the two readings.
-  The model decides who and what: name, role, source, direction, reply, and match.
-  The rules keep what they read exactly: link addresses, contacts, and any time the model left out.
+  The model decides name, role, source, direction, and reply.
+  A strong rules match wins over the model's pick.
+  The rules keep link addresses and contacts, and their times and deadlines win when they read one, because they see the day lines that a copied time loses.
+  A deadline like "48 hours" counts from when her message was sent.
 - If the model is off, slow (12 s), or fails, the rules reading is used, and she sees no difference except the fields.
 - Errors carry only a failure kind and a status code, never text from the paste or the reply.
 
@@ -349,22 +354,26 @@ It would have to know her zone, daylight saving, and "yesterday" relative to the
 
 ## D17. Model choice
 
-**Measured.** The rules on the blind set (`pnpm eval --set blind`, 40 cases, D14):
+**Measured.** The rules on the blind set (`pnpm eval --set blind`, 40 cases, D14).
+Every field is checked on every case: a proposal that fills a field the paste does not state is wrong.
+"match" counts only a match that attaches by default. "suggest" counts the candidate listed first.
 
-| Field | Rules |
-|---|---|
-| name | 87% (33/38) |
-| contacts | 95% (18/19) |
-| role | 100% (20/20) |
-| source | 91% (29/32) |
-| direction | 95% (38/40) |
-| message time | 87% (27/31) |
-| links | 95% (38/40) |
-| deadline | 93% (37/40) |
-| needs reply | 88% (35/40) |
-| match | 95% (38/40) |
+| Field | With her name and email | Without them |
+|---|---|---|
+| name | 88% (35/40) | 78% (31/40) |
+| contacts (exact set) | 95% (38/40) | 90% (36/40) |
+| role | 100% (40/40) | 100% (40/40) |
+| source | 93% (37/40) | 93% (37/40) |
+| direction | 95% (38/40) | 85% (34/40) |
+| message time | 90% (36/40) | 90% (36/40) |
+| links | 95% (38/40) | 95% (38/40) |
+| deadline | 93% (37/40) | 85% (34/40) |
+| needs reply | 88% (35/40) | 85% (34/40) |
+| match (attaches) | 88% (35/40) | 88% (35/40) |
+| suggest (listed first) | 95% (38/40) | 95% (38/40) |
 
-For comparison, the first rules scored 36% on name, 31% on source, and 23% on message time on a blind set.
+The app knows her name and email once she signs in (M5), so the first column is what she gets.
+For comparison, the first rules scored 36% on name, 31% on source, and 23% on message time on a blind set, under a looser scorer.
 
 **Not measured yet.** The run had no `OPENROUTER_API_KEY` in `.env`, so no model ran (B2).
 `pnpm eval --set blind --jev` measures these, chosen for low cost and structured output support on OpenRouter:
@@ -377,18 +386,23 @@ For comparison, the first rules scored 36% on name, 31% on source, and 23% on me
 | `anthropic/claude-haiku-4.5` | 1.00 / 5.00 | 0.0023 |
 | `jev-1.13` (direction, needs reply, match only) | 0.042 / free | under 0.0001 |
 
-The estimate assumes about 1,500 input tokens (instructions, a list of 30 known candidates, the paste) and 150 output tokens.
+The estimate assumes about 1,500 input tokens and 150 output tokens.
+Each request caps output at 1,000 tokens, which also bounds a reasoning model.
 At 20 pastes a day, every option costs under $0.05 a day.
 
-**Choice.** The rules are the reader until the numbers exist.
+**Choice.** The rules are the reader until a model beats them.
 The model stays off: the Worker needs both `OPENROUTER_API_KEY` and `MODEL_ID`, and `MODEL_ID` is unset.
 
-**Rule for turning it on.** Run `pnpm eval --set blind --jev`, then:
+**Rule for turning it on.** Run `pnpm eval --set blind --jev`. The run uses the app's 12-second limit, and a failed or slow call counts as wrong. Then:
 1. Take the merged reading ("rules + model") of each chat model.
-2. Keep a model only if it is at least 5 points better than the rules on name, message time, or needs reply, and no field drops more than 2 points.
-3. Of the models kept, pick the cheapest one within 2 points of the best total.
-4. Use Jev only if "rules + jev" beats both the rules and the picked model on direction, needs reply, and match. Otherwise leave Jev out (the brief says not to force it).
-5. Record the table here as D18, and set `MODEL_ID`.
+2. Keep a model only if, over name, message time, needs reply, and match together, it gets at least 4 more cases right than the rules.
+   It must also not lose more than 1 case on any other field, and it must have no errors.
+3. Of the models kept, pick the cheapest one within 2 cases of the best total.
+4. Use Jev only if "rules + jev" gets more cases right than both the rules and the picked model on direction, needs reply, and match, with no errors.
+   Its requests demand zero retention too. If TypeSafe cannot serve that, every call fails and Jev is out.
+   Otherwise leave Jev out, because the brief says not to force it.
+5. Record the table as a new decision, and set `MODEL_ID`.
 
 **Reason.** The brief says to measure, not assume.
+On 40 cases, one case is 2.5 points, so the rule counts cases, not percentages.
 Until a model beats the rules on the blind set, adding one costs money and a network wait for no known gain.
