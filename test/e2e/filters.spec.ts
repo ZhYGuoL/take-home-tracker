@@ -143,3 +143,30 @@ test.describe('filters combined', () => {
     await expect.poll(() => shown(page)).toEqual(['Ada', 'Ben', 'Cyd', 'Dev', 'Eli', 'Fay'])
   })
 })
+
+test.describe('the filter popover', () => {
+  test('Escape closes it and puts focus back on its chip', async ({ page }) => {
+    const chip = page.getByRole('button', { name: /^Stage/ })
+    await chip.click()
+    await page.getByRole('checkbox', { name: /^Sent/ }).focus()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('checkbox', { name: /^Sent/ })).toHaveCount(0)
+    await expect(chip).toBeFocused()
+  })
+
+  test('a tap outside closes it without opening the row behind', async ({ page }) => {
+    await page.getByRole('button', { name: /^Flag/ }).click()
+    await expect(page.getByRole('checkbox', { name: /^Late/ })).toBeVisible()
+    await page.mouse.click(10, 400)
+    await expect(page.getByRole('checkbox', { name: /^Late/ })).toHaveCount(0)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  })
+
+  test('choosing a date field alone filters nothing', async ({ page }) => {
+    await page.getByRole('button', { name: /^Date/ }).click()
+    await page.getByLabel('Field').selectOption('submitted')
+    await page.keyboard.press('Escape')
+    await expect.poll(() => shown(page)).toEqual(['Ada', 'Ben', 'Cyd', 'Dev', 'Eli', 'Fay'])
+    await expect(page.getByRole('button', { name: /^Date/ })).not.toContainText('1')
+  })
+})

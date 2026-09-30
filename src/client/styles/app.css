@@ -832,7 +832,12 @@
 }
 
 .control[aria-pressed="true"] {
-  background: var(--selected);
+  border-color: var(--ink);
+  font-weight: 500;
+}
+
+.popover-scrim {
+  display: none;
 }
 
 .option {
@@ -904,6 +909,13 @@
   }
   .chip-wrap {
     position: static;
+  }
+  .popover-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgba(10, 10, 10, 0.16);
   }
   .popover {
     position: fixed;

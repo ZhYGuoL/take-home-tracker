@@ -75,6 +75,25 @@ export function FilterBar({ filters, counts, zone, now, onChange }: Props) {
       </label>
 
       <div className="chips">
+        {activeCount(filters) > 0 && (
+          <button
+            type="button"
+            className="control"
+            onClick={() =>
+              onChange({
+                ...filters,
+                stages: [],
+                flags: [],
+                roles: [],
+                sources: [],
+                date: null,
+                q: '',
+              })
+            }
+          >
+            Clear <span className="num">{activeCount(filters)}</span>
+          </button>
+        )}
         <Chip
           label="Stage"
           selected={filters.stages.length}
@@ -163,25 +182,6 @@ export function FilterBar({ filters, counts, zone, now, onChange }: Props) {
             onChange={(date) => set({ date })}
           />
         </Chip>
-        {activeCount(filters) > 0 && (
-          <button
-            type="button"
-            className="control"
-            onClick={() =>
-              onChange({
-                ...filters,
-                stages: [],
-                flags: [],
-                roles: [],
-                sources: [],
-                date: null,
-                q: '',
-              })
-            }
-          >
-            Clear <span className="num">{activeCount(filters)}</span>
-          </button>
-        )}
       </div>
     </div>
   )
@@ -205,13 +205,20 @@ function Chip({
   children: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!open) return
+    // A tap on the phone scrim closes through the scrim's own click, so the tap never
+    // reaches the row under it.
     const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+      const target = e.target as Element
+      if (ref.current?.contains(target) || target.closest?.('.popover-scrim')) return
+      onClose()
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      onClose()
+      button.current?.focus()
     }
     document.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onKey)
@@ -221,9 +228,23 @@ function Chip({
     }
   }, [open, onClose])
 
+  // Tab out of the popover closes it. Safari gives no new focus target when a tap lands on a
+  // checkbox, so only a real move to another element outside counts.
+  useEffect(() => {
+    const el = ref.current
+    if (!open || !el) return
+    const onOut = (e: FocusEvent) => {
+      const next = e.relatedTarget as Node | null
+      if (next && !el.contains(next)) onClose()
+    }
+    el.addEventListener('focusout', onOut)
+    return () => el.removeEventListener('focusout', onOut)
+  }, [open, onClose])
+
   return (
     <div className="chip-wrap" ref={ref}>
       <button
+        ref={button}
         type="button"
         className="control chip"
         aria-expanded={open}
@@ -237,7 +258,12 @@ function Chip({
           <path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.3" />
         </svg>
       </button>
-      {open && <div className="popover fade-in">{children}</div>}
+      {open && (
+        <>
+          <div className="popover-scrim" aria-hidden="true" onClick={onClose} />
+          <div className="popover fade-in">{children}</div>
+        </>
+      )}
     </div>
   )
 }
@@ -288,29 +314,27 @@ function DateOptions({
   onChange: (r: DateRange | null) => void
 }) {
   const today = localParts(new Date(now).toISOString(), zone).date
-  const field: DateField = range?.field ?? 'deadline'
+  // The field alone filters nothing, so it only becomes a filter together with a range.
+  const [picked, setPicked] = useState<DateField>(range?.field ?? 'deadline')
+  const field = range?.field ?? picked
   const presets: Array<[string, string | null, string | null]> = [
     ['Today', today, today],
-    ['Next 7 days', today, addDays(today, 7)],
-    ['Past 7 days', addDays(today, -7), today],
-    ['Past 30 days', addDays(today, -30), today],
+    ['Next 7 days', today, addDays(today, 6)],
+    ['Past 7 days', addDays(today, -6), today],
+    ['Past 30 days', addDays(today, -29), today],
   ]
-  const setRange = (from: string | null, to: string | null) => onChange({ field, from, to })
+  const setRange = (from: string | null, to: string | null) =>
+    onChange(from || to ? { field, from, to } : null)
+  const setField = (f: DateField) => {
+    setPicked(f)
+    if (range) onChange({ ...range, field: f })
+  }
   return (
     <div className="options">
       <span className="section-label">DATE</span>
       <label className="field">
         <span className="field-label">Field</span>
-        <select
-          value={field}
-          onChange={(e) =>
-            onChange({
-              field: e.target.value as DateField,
-              from: range?.from ?? null,
-              to: range?.to ?? null,
-            })
-          }
-        >
+        <select value={field} onChange={(e) => setField(e.target.value as DateField)}>
           {DATE_FIELDS.map((f) => (
             <option key={f} value={f}>
               {DATE_FIELD_LABELS[f]}
