@@ -157,22 +157,23 @@
 
 .table {
   width: 100%;
-  min-width: 1180px;
+  /* The fixed columns take 1020px, so NAME keeps at least 200px before the table scrolls. */
+  min-width: 1220px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
 .col-role {
-  width: 15%;
+  width: 160px;
 }
 .col-stage {
   width: 112px;
 }
 .col-flags {
-  width: 196px;
+  width: 168px;
 }
 .col-deadline {
-  width: 170px;
+  width: 172px;
 }
 .col-source {
   width: 88px;
@@ -181,7 +182,7 @@
   width: 112px;
 }
 .col-link {
-  width: 20%;
+  width: 208px;
 }
 
 .table th,
