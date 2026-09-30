@@ -93,11 +93,8 @@
 }
 
 @media (hover: hover) {
-  .control:hover {
+  .control:not(.primary):hover {
     background: var(--hover);
-  }
-  .control.primary:hover {
-    background: #262626;
   }
 }
 
@@ -436,7 +433,7 @@
 }
 
 .field-error {
-  color: var(--pink);
+  color: var(--ink);
 }
 
 .field input,
@@ -468,7 +465,13 @@
 }
 
 .field[data-invalid] input {
-  border-color: var(--pink);
+  border-color: var(--ink);
+}
+
+.field input[type="date"],
+.field input[type="time"] {
+  font-family: var(--font-mono);
+  letter-spacing: normal;
 }
 
 .field-row {
@@ -591,10 +594,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.control.danger {
-  color: var(--pink);
 }
 
 .inline-form {

@@ -217,7 +217,7 @@ function DeleteButton({ name, onConfirm }: { name: string; onConfirm: () => void
   }
   return (
     <>
-      <button type="button" className="control danger" onClick={onConfirm}>
+      <button type="button" className="control primary" onClick={onConfirm}>
         Delete {name}
       </button>
       <button type="button" className="control" onClick={() => setAsking(false)}>
