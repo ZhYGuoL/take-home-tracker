@@ -192,3 +192,38 @@ test('a pasted submission with no time asks for the time before saving', async (
     'Wed, Sep 30, 9:30 AM PDT',
   )
 })
+
+test('moving a message to a new candidate takes its contact along and leaves no empty duplicate', async ({
+  page,
+}) => {
+  const priya = person('Priya Raman', { contacts: ['priya.raman@example.com'] })
+  await seed(page, [priya])
+  const dialog = await paste(
+    page,
+    `From: Sam Okafor <sam.okafor@example.com>
+Date: Wed, Sep 30, 2026 at 11:42 AM
+
+here it is: https://github.com/ex-praman/ledgerline`,
+  )
+  // She attaches it to Priya by mistake. The contact shown is only what attaching adds.
+  await dialog.getByLabel('Attach to').selectOption({ label: 'Priya Raman' })
+  await expect(dialog.getByLabel('Contact')).toHaveValue('sam.okafor@example.com')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  const priyaPanel = page.getByRole('dialog', { name: 'Priya Raman' })
+  await expect(priyaPanel).toContainText('sam.okafor@example.com')
+
+  const item = priyaPanel.getByRole('listitem').filter({ hasText: 'ledgerline' })
+  await item.getByRole('button', { name: 'Move', exact: true }).click()
+  await item.getByRole('combobox', { name: 'Move to' }).selectOption({ label: 'New candidate' })
+  const move = page.getByRole('dialog', { name: 'New candidate' })
+  await expect(move.getByLabel('Name', { exact: true })).toHaveValue('Sam Okafor')
+  await move.getByRole('button', { name: 'Save' }).click()
+
+  const sam = page.getByRole('dialog', { name: 'Sam Okafor' })
+  await expect(sam).toContainText('sam.okafor@example.com')
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+  await page.goto(`/?view=all&c=${priya.id}`)
+  await expect(page.getByRole('dialog', { name: 'Priya Raman' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Priya Raman' })).not.toContainText('sam.okafor')
+  await expect(page.getByRole('dialog', { name: 'Priya Raman' })).not.toContainText('ledgerline')
+})

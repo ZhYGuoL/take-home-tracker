@@ -47,6 +47,10 @@ export function App() {
   const setFilters = (f: Filters) => navigate(filtersToQuery(f), 'replace')
   const openId = search.get('c')
   const adding = search.get('new') === '1'
+  const movingId = search.get('move')
+  const moving = entries.find(
+    (e): e is Extract<typeof e, { kind: 'message' }> => e.id === movingId && e.kind === 'message',
+  )
   const openRow = rows.find((r) => r.candidate.id === openId) ?? null
   const roles = useMemo(
     () => [...new Set(rows.map((r) => r.candidate.role).filter(Boolean))].sort(),
@@ -157,8 +161,9 @@ export function App() {
           now={now}
           extract={extract}
           self={undefined}
+          moving={moving}
           onAddByHand={add}
-          onSaved={(id) => navigate({ new: null, c: id }, 'replace')}
+          onSaved={(id) => navigate({ new: null, move: null, c: id }, 'replace')}
           onClose={() => close('new')}
         />
       )}

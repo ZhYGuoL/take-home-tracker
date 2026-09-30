@@ -1,14 +1,17 @@
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { parseContacts } from '../../core/contacts'
 import { deadlineAt, formatDateTime, zoneName } from '../../core/deadline'
 import { type DraftErrors, validateDraft } from '../../core/draft'
 import type { ExtractContext, KnownCandidate, Proposal } from '../../core/extract/types'
 import { normalizeUrl } from '../../core/links'
+import { moveMessage } from '../../core/move'
 import { MAX_PASTE, type PasteDraft, pasteDraft, pasteRecords } from '../../core/paste'
 import {
   type Candidate,
   type Entry,
   LINK_KINDS,
   type LinkKind,
+  type MessageEntry,
   type Source,
 } from '../../core/types'
 import { newId } from '../lib/time'
@@ -22,6 +25,8 @@ interface Props {
   roles: string[]
   extract: Extractor
   self: ExtractContext['self']
+  /** A saved message to move to a new candidate. Only the candidate's fields are asked. */
+  moving?: MessageEntry
   onSaved: (candidateId: string) => void
   onCancel: () => void
 }
@@ -66,7 +71,23 @@ function knownCandidates(candidates: Candidate[], entries: Entry[]): KnownCandid
   }))
 }
 
-export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Props) {
+/**
+ * Sets the target. For a known candidate, the contact field lists only what is new to them,
+ * which is exactly what attaching adds. For a new candidate, it lists every contact in the paste.
+ */
+function withTargetContacts(d: PasteDraft, target: string, candidates: Candidate[]): PasteDraft {
+  const all = [...new Set([...(d.proposedContacts ?? parseContacts(d.candidate.contacts))])]
+  const known = candidates.find((c) => c.id === target)
+  const shown = known ? all.filter((c) => !known.contacts.includes(c)) : all
+  return {
+    ...d,
+    target,
+    proposedContacts: all,
+    candidate: { ...d.candidate, contacts: shown.join(', ') },
+  }
+}
+
+export function PasteFlow({ zone, roles, extract, self, moving, onSaved, onCancel }: Props) {
   const repo = useRepo()
   const { candidates, entries } = useLive()
   const [text, setText] = useState('')
@@ -83,13 +104,21 @@ export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Pro
     try {
       const p = await extract(paste, ctx)
       setMatchVia(p.match ? { id: p.match.id, via: p.match.via } : null)
-      setDraft(pasteDraft(p, paste, zone, now, lastSource()))
+      const d = pasteDraft(p, paste, zone, now, lastSource())
+      setDraft(moving ? { ...d, target: 'new' } : withTargetContacts(d, d.target, candidates))
     } finally {
       setReading(false)
     }
   }
 
+  // Moving a saved message reads its text at once. There is nothing to paste.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once for the message being moved
+  useEffect(() => {
+    if (moving) void read(moving.text)
+  }, [])
+
   if (!draft) {
+    if (moving) return null
     return (
       <form
         className="form"
@@ -132,6 +161,21 @@ export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Pro
   }
 
   const save = (d: PasteDraft) => {
+    if (moving) {
+      const from = candidates.find((c) => c.id === moving.candidateId)
+      if (!from) return
+      const { candidate } = pasteRecords(
+        { ...d, target: 'new' },
+        zone,
+        null,
+        { candidate: newId(), entry: moving.id },
+        Date.now(),
+      )
+      const { save: records, remove } = moveMessage(moving, from, candidate, entries)
+      void repo.saveAll(records).then(() => Promise.all(remove.map((c) => repo.deleteCandidate(c))))
+      onSaved(candidate.id)
+      return
+    }
     const existing = candidates.find((c) => c.id === d.target) ?? null
     const { candidate, entry } = pasteRecords(
       d,
@@ -149,6 +193,7 @@ export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Pro
     <Confirm
       draft={draft}
       setDraft={setDraft}
+      moving={Boolean(moving)}
       candidates={candidates}
       matchVia={matchVia}
       zone={zone}
@@ -162,6 +207,7 @@ export function PasteFlow({ zone, roles, extract, self, onSaved, onCancel }: Pro
 interface ConfirmProps {
   draft: PasteDraft
   setDraft: (d: PasteDraft) => void
+  moving: boolean
   candidates: Candidate[]
   matchVia: { id: string; via: string } | null
   zone: string
@@ -173,6 +219,7 @@ interface ConfirmProps {
 function Confirm({
   draft,
   setDraft,
+  moving,
   candidates,
   matchVia,
   zone,
@@ -215,10 +262,13 @@ function Confirm({
   return (
     <form className="form" onSubmit={submit} noValidate>
       <div className="form-body thin-scroll">
-        <fieldset>
+        <fieldset hidden={moving}>
           <legend className="visually-hidden">Attach</legend>
           <Field label="Attach to">
-            <select value={draft.target} onChange={(e) => set({ target: e.target.value })}>
+            <select
+              value={draft.target}
+              onChange={(e) => setDraft(withTargetContacts(draft, e.target.value, candidates))}
+            >
               <option value="new">New candidate</option>
               {sorted.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -248,7 +298,7 @@ function Confirm({
             roles={roles}
           />
         )}
-        <fieldset>
+        <fieldset hidden={moving}>
           <legend>MESSAGE</legend>
           <Field label="From">
             <select
@@ -328,6 +378,21 @@ function Confirm({
             </label>
           )}
         </fieldset>
+        {!isNew && target && (
+          <fieldset>
+            <legend>{`ADDS TO ${target.name.toUpperCase()}`}</legend>
+            <Field label="Contact">
+              <input
+                value={draft.candidate.contacts}
+                placeholder="Email, handle, or phone"
+                autoComplete="off"
+                onChange={(e) =>
+                  set({ candidate: { ...draft.candidate, contacts: e.target.value } })
+                }
+              />
+            </Field>
+          </fieldset>
+        )}
         {!isNew && due && (
           <fieldset>
             <legend>DEADLINE</legend>
@@ -347,7 +412,7 @@ function Confirm({
             </label>
           </fieldset>
         )}
-        <fieldset>
+        <fieldset hidden={moving}>
           <legend>PASTED</legend>
           <pre className="paste-text">{draft.text}</pre>
         </fieldset>

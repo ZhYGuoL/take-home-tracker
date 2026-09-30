@@ -9,15 +9,18 @@ import {
 import { formatDateTime, instantIn, localParts, relative, zoneName } from '../../core/deadline'
 import { type CandidateDraft, candidateFromDraft, draftFromCandidate } from '../../core/draft'
 import { normalizeUrl, shortUrl } from '../../core/links'
+import { moveMessage } from '../../core/move'
 import {
   type Entry,
   type LinkKind,
+  type MessageEntry,
   SOURCE_LABELS,
   STAGE_LABELS,
   STAGES,
   type Stage,
 } from '../../core/types'
 import { newId } from '../lib/time'
+import { navigate } from '../lib/url'
 import type { Row } from '../store/context'
 import { useLive, useRepo } from '../store/context'
 import { FlagBadges } from './Badges'
@@ -534,20 +537,32 @@ function Notes({ value, onSave }: { value: string; onSave: (v: string) => void }
 }
 
 /** Moves a message that went to the wrong candidate. Picking the right one is the whole fix. */
-function MoveEntry({ entry }: { entry: Entry }) {
+function MoveEntry({ entry }: { entry: MessageEntry }) {
   const repo = useRepo()
-  const { candidates } = useLive()
+  const { candidates, entries } = useLive()
   const [open, setOpen] = useState(false)
+  const from = candidates.find((c) => c.id === entry.candidateId)
   const others = candidates
     .filter((c) => c.id !== entry.candidateId)
     .sort((a, b) => a.name.localeCompare(b.name))
-  if (others.length === 0) return null
+  if (!from) return null
   if (!open) {
     return (
       <button type="button" className="text-button" onClick={() => setOpen(true)}>
         Move
       </button>
     )
+  }
+  const moveTo = (id: string) => {
+    if (id === 'new') {
+      navigate({ new: '1', move: entry.id })
+      return
+    }
+    const to = candidates.find((c) => c.id === id)
+    if (!to) return
+    const { save, remove } = moveMessage(entry, from, to, entries)
+    void repo.saveAll(save).then(() => Promise.all(remove.map((c) => repo.deleteCandidate(c))))
+    if (remove.length > 0) navigate({ c: to.id }, 'replace')
   }
   return (
     <select
@@ -558,10 +573,11 @@ function MoveEntry({ entry }: { entry: Entry }) {
       autoFocus
       onBlur={() => setOpen(false)}
       onChange={(e) => {
-        if (e.target.value) void repo.saveEntry({ ...entry, candidateId: e.target.value })
+        if (e.target.value) moveTo(e.target.value)
       }}
     >
       <option value="">Move to</option>
+      <option value="new">New candidate</option>
       {others.map((c) => (
         <option key={c.id} value={c.id}>
           {c.name}
