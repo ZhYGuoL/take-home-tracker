@@ -3,19 +3,20 @@
 Each item is something only Zhiyuan can do.
 Each item says what is missing, why it matters, and the exact steps.
 
-## B1. Decide about two early commits before the repo goes public
+## B1. Decide about the early history before the repo goes public
 
-**What.** Commit `c85b5fc` ("docs: record D1 to D12") has two lines that later commits removed:
-- the recruiter's first name,
-- one personal sentence.
-
-Later commits removed both lines from the files.
+**What.** Commit `c85b5fc` ("docs: record D1 to D12") has 11 lines with the recruiter's first name.
+One of them is a personal sentence.
+Later commits removed all of them from the files, and no other commit adds her name.
 They are still in the git history, and the unattended run may not rewrite history.
+
+Every commit also carries the git author email of this computer.
+If you want the GitHub no-reply address in public, the new history in step 2 is the moment to set it.
 
 **Why it matters.** Anyone can read the full history of a public repo.
 
 **Steps.** Pick one before the first push:
-1. If both lines are fine to publish, do nothing.
+1. If those lines are fine to publish, do nothing.
 2. If not, publish a new history with one commit:
    ```
    git branch -m main history
