@@ -73,16 +73,36 @@ On Workers it also needs an extra adapter (OpenNext).
 One pure function computes the stage, the submission time, and the three flags from the entries.
 The app never stores them.
 
-In the Sheet, every save appends a row: `id`, `type`, `updated_at`, `deleted`, `data` (JSON).
-The newest row for an id wins.
-The app never edits a row in place.
+The spreadsheet has two tabs.
+- `records` is the store.
+  Every save appends a row: `id`, `type`, `updated_at`, `deleted`, `data` (JSON).
+  The append uses `insertDataOption=INSERT_ROWS` and `valueInputOption=RAW`, so Sheets never overwrites a row or reads a value as a date.
+  The newest row for an id wins.
+  The app never edits a row in place.
+- `candidates` is a readable view with one row per candidate and plain columns.
+  The app rewrites it from the store after each sync.
+  Nothing reads it back, so an edit there has no effect, and a lost rewrite only makes it stale until the next one.
+
+On each sync, the `records` tab is the truth.
+Local state is the `records` tab plus the saves on this device that did not upload yet.
+
+When the recruiter deletes a candidate, the app deletes every row of that candidate and its entries from `records`.
+So the personal data really goes away, and it is not only hidden.
+
+A pasted message is at most 20,000 characters.
+A Sheets cell holds at most 50,000.
 
 **Reason.**
 - If the recruiter moves a wrongly matched message to another candidate, both candidates recompute correctly.
   No stored field can go stale.
 - The timeline that the brief asks for is the same data, so there is one source of truth.
-- The Sheets API "append" is atomic.
+- An append with `INSERT_ROWS` adds a new row at the end.
   A phone and a laptop that save at the same time do not overwrite each other.
+  Every record has a unique id, so a retried append makes a duplicate that the merge ignores.
+
+**Rejected: a readable sheet with one row per candidate as the store.**
+It is what the recruiter would like to see, and the `candidates` tab gives her that view.
+As the store it fails, because two devices that edit at the same time rewrite the same row, and the timeline needs a second table anyway.
 
 **Rejected: one JSON file in Drive.**
 The Drive API has no conditional update, so two devices that save at the same time lose data.
