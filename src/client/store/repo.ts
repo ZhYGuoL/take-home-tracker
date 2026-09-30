@@ -15,10 +15,17 @@ export function monotonicClock(now: () => number = Date.now): () => string {
   }
 }
 
+export type SaveStatus = 'saved' | 'saving' | 'failed'
+
 export class Repo {
   private records = new Map<string, StoredRecord>()
   private snapshot: Live = { candidates: [], entries: [] }
   private listeners = new Set<() => void>()
+  private status: SaveStatus = 'saved'
+  private statusListeners = new Set<() => void>()
+  private inFlight = 0
+  /** Changes whose save failed. `retry` saves them again. */
+  private unsaved = new Map<string, StoredRecord>()
 
   constructor(
     private readonly persistence: Persistence,
@@ -35,6 +42,19 @@ export class Repo {
   }
 
   getSnapshot = (): Live => this.snapshot
+
+  subscribeStatus = (fn: () => void): (() => void) => {
+    this.statusListeners.add(fn)
+    return () => this.statusListeners.delete(fn)
+  }
+
+  getStatus = (): SaveStatus => this.status
+
+  retry(): Promise<void> {
+    const again = [...this.unsaved.values()]
+    this.unsaved.clear()
+    return this.persist(again)
+  }
 
   /** Applies records that came from elsewhere, such as another device. */
   apply(incoming: StoredRecord[]): void {
@@ -82,6 +102,27 @@ export class Repo {
 
   private write(changed: StoredRecord[]): Promise<void> {
     this.apply(changed)
-    return this.persistence.save(changed)
+    return this.persist(changed)
+  }
+
+  private async persist(changed: StoredRecord[]): Promise<void> {
+    if (changed.length === 0) return
+    this.inFlight++
+    this.setStatus('saving')
+    try {
+      await this.persistence.save(changed)
+    } catch (err) {
+      for (const r of changed) this.unsaved.set(r.id, r)
+      console.error('save failed', err instanceof Error ? err.name : 'unknown')
+    } finally {
+      this.inFlight--
+      if (this.inFlight === 0) this.setStatus(this.unsaved.size > 0 ? 'failed' : 'saved')
+    }
+  }
+
+  private setStatus(next: SaveStatus) {
+    if (next === this.status) return
+    this.status = next
+    for (const fn of this.statusListeners) fn()
   }
 }

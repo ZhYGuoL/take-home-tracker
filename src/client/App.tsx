@@ -13,10 +13,11 @@ import { DetailPanel } from './components/DetailPanel'
 import { Sheet, SheetHeader } from './components/Sheet'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
-import { type Row, useLive, useRepo, useRows } from './store/context'
+import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
 
 export function App() {
   const repo = useRepo()
+  const saveStatus = useSaveStatus()
   const rows = useRows()
   const { entries } = useLive()
   const now = useNow()
@@ -73,6 +74,14 @@ export function App() {
         <h1>
           Take-homes <span className="num count">{rows.length}</span>
         </h1>
+        {saveStatus === 'failed' && (
+          <span className="save-failed" role="alert">
+            Not saved
+            <button type="button" className="control small" onClick={() => void repo.retry()}>
+              Retry
+            </button>
+          </span>
+        )}
         <button type="button" className="control primary" onClick={() => navigate({ new: '1' })}>
           Add
         </button>

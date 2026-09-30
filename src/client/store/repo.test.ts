@@ -57,6 +57,56 @@ describe('Repo', () => {
   })
 })
 
+describe('Repo save failures', () => {
+  function flaky(): Persistence & { saved: StoredRecord[]; failNext: number } {
+    const p = {
+      saved: [] as StoredRecord[],
+      failNext: 0,
+      load: async () => [],
+      save: async (r: StoredRecord[]) => {
+        if (p.failNext > 0) {
+          p.failNext--
+          throw new Error('Connection to Indexed Database server lost')
+        }
+        p.saved.push(...r)
+      },
+    }
+    return p
+  }
+
+  it('a failed save shows as failed and does not stop later saves', async () => {
+    const p = flaky()
+    const repo = new Repo(p)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    p.failNext = 1
+    await repo.saveCandidate(candidate({ name: 'Lost for now' }))
+    expect(repo.getStatus()).toBe('failed')
+    await repo.saveCandidate(candidate({ name: 'Saved' }))
+    expect(p.saved.map((r) => (r.data as { name: string }).name)).toEqual(['Saved'])
+    expect(repo.getStatus()).toBe('failed')
+  })
+
+  it('retry saves what failed and clears the failure', async () => {
+    const p = flaky()
+    const repo = new Repo(p)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    p.failNext = 1
+    await repo.saveCandidate(candidate({ name: 'Second try' }))
+    await repo.retry()
+    expect(repo.getStatus()).toBe('saved')
+    expect(p.saved.map((r) => (r.data as { name: string }).name)).toEqual(['Second try'])
+  })
+
+  it('logs no candidate data when a save fails', async () => {
+    const p = flaky()
+    const repo = new Repo(p)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    p.failNext = 1
+    await repo.saveCandidate(candidate({ name: 'Private Name', notes: 'private note' }))
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/Private Name|private note/)
+  })
+})
+
 describe('idbPersistence', () => {
   it('a new repo on the same account loads what the last one saved', async () => {
     const c = candidate()
@@ -64,6 +114,20 @@ describe('idbPersistence', () => {
     const again = new Repo(idbPersistence('acct-a'))
     await again.init()
     expect(again.getSnapshot().candidates).toEqual([c])
+  })
+
+  it('a failed save does not block the next one', async () => {
+    const persistence = idbPersistence('acct-d')
+    const bad = { id: 'x', type: 'candidate', updatedAt: 'not a date' } as unknown as StoredRecord
+    // A record that IndexedDB cannot store makes that one save fail.
+    await expect(
+      persistence.save([{ ...bad, data: { fn: () => 1 } } as unknown as StoredRecord]),
+    ).rejects.toThrow()
+    const c = candidate()
+    await persistence.save([
+      { id: c.id, type: 'candidate', updatedAt: '2026-09-30T10:00:00Z', deleted: false, data: c },
+    ])
+    expect((await persistence.load()).map((r) => r.id)).toEqual([c.id])
   })
 
   it('another account on the same browser sees nothing', async () => {

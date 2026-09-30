@@ -16,6 +16,11 @@ export function useRepo(): Repo {
   return repo
 }
 
+export function useSaveStatus() {
+  const repo = useRepo()
+  return useSyncExternalStore(repo.subscribeStatus, repo.getStatus)
+}
+
 export function useLive(): Live {
   const repo = useRepo()
   return useSyncExternalStore(repo.subscribe, repo.getSnapshot)
