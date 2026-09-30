@@ -19,7 +19,7 @@ import {
 } from '../../core/types'
 import { newId } from '../lib/time'
 import type { Row } from '../store/context'
-import { useRepo } from '../store/context'
+import { useLive, useRepo } from '../store/context'
 import { FlagBadges } from './Badges'
 import { CandidateForm } from './CandidateForm'
 import { SheetHeader } from './Sheet'
@@ -533,6 +533,44 @@ function Notes({ value, onSave }: { value: string; onSave: (v: string) => void }
   )
 }
 
+/** Moves a message that went to the wrong candidate. Picking the right one is the whole fix. */
+function MoveEntry({ entry }: { entry: Entry }) {
+  const repo = useRepo()
+  const { candidates } = useLive()
+  const [open, setOpen] = useState(false)
+  const others = candidates
+    .filter((c) => c.id !== entry.candidateId)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  if (others.length === 0) return null
+  if (!open) {
+    return (
+      <button type="button" className="text-button" onClick={() => setOpen(true)}>
+        Move
+      </button>
+    )
+  }
+  return (
+    <select
+      className="move-select"
+      aria-label="Move to"
+      value=""
+      // biome-ignore lint/a11y/noAutofocus: she just asked to move this message
+      autoFocus
+      onBlur={() => setOpen(false)}
+      onChange={(e) => {
+        if (e.target.value) void repo.saveEntry({ ...entry, candidateId: e.target.value })
+      }}
+    >
+      <option value="">Move to</option>
+      {others.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 /** Removes one timeline entry, such as a wrong link. The second click confirms. */
 function RemoveEntry({ entry }: { entry: Entry }) {
   const repo = useRepo()
@@ -631,7 +669,12 @@ function Timeline({
           <li key={item.id}>
             <span className="timeline-head">
               <span className="num muted timeline-time">{formatDateTime(item.at, zone)}</span>
-              {item.entry && <RemoveEntry entry={item.entry} />}
+              {item.entry && (
+                <span className="timeline-actions">
+                  {item.entry.kind === 'message' && <MoveEntry entry={item.entry} />}
+                  <RemoveEntry entry={item.entry} />
+                </span>
+              )}
             </span>
             <span className="timeline-label">{item.label}</span>
             {item.body}

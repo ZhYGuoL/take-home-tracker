@@ -649,6 +649,21 @@
   gap: 8px;
 }
 
+.timeline-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.move-select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  font-size: 12px;
+}
+
 .timeline-confirm {
   display: flex;
   gap: 12px;

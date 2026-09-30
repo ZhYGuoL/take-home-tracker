@@ -134,3 +134,26 @@ test('pasting into the empty box reads it at once', async ({ page }) => {
   }, firstEmail)
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Priya Raman')
 })
+
+test('a message saved to the wrong candidate moves to the right one in one step', async ({
+  page,
+}) => {
+  const priya = person('Priya Raman', { contacts: ['priya.raman@example.com'] })
+  const pia = person('Pia Laurent')
+  await seed(page, [priya, pia])
+  const dialog = await paste(page, firstEmail)
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+
+  const detail = page.getByRole('dialog', { name: 'Priya Raman' })
+  const item = detail.getByRole('listitem').filter({ hasText: 'ledgerline-priya' })
+  await item.getByRole('button', { name: 'Move', exact: true }).click()
+  await item.getByRole('combobox', { name: 'Move to' }).selectOption({ label: 'Pia Laurent' })
+  await expect(stageButton(page, 'Sent')).toHaveAttribute('aria-pressed', 'true')
+  await expect(detail.getByText('ledgerline-priya')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('radio', { name: /All/ }).click()
+  await page.getByRole('button', { name: 'Pia Laurent' }).click()
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+})
