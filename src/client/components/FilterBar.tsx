@@ -74,7 +74,7 @@ export function FilterBar({ filters, counts, zone, now, onChange }: Props) {
         />
       </label>
 
-      <div className="chips thin-scroll">
+      <div className="chips">
         <Chip
           label="Stage"
           selected={filters.stages.length}

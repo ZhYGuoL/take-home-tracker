@@ -89,9 +89,7 @@ export function App() {
   return (
     <div className="app">
       <header className="top">
-        <h1>
-          Take-homes <span className="num count">{rows.length}</span>
-        </h1>
+        <h1>Take-homes</h1>
         {saveStatus === 'failed' && (
           <span className="save-failed" role="alert">
             Not saved
