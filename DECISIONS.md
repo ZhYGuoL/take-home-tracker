@@ -139,7 +139,8 @@ They need an email sender and a user store, and v2 needs Google anyway.
 ## D5. No dev-only sign-in in production
 
 **Choice.** There is no special dev login route.
-Development and tests use the real OAuth code path against a local fake Google server (`test/fake-google`, planned for M5).
+Development and tests use the real OAuth code path against a local fake Google server (`test/fake-google/server.ts`).
+It serves the account chooser, the token and revoke endpoints, and the Sheets and Drive calls the app makes, with per-person access.
 - The production Worker entry (`src/worker/index.ts`) has the Google endpoints as constants.
 - Only the dev entry (`src/worker/dev.ts`) can point at the fake server.
   The dev entry also answers 404 to every host that is not `localhost` or `127.0.0.1`.
