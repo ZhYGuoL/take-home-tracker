@@ -14,7 +14,12 @@ import {
   relative,
   zoneName,
 } from '../../core/deadline'
-import { type CandidateDraft, candidateFromDraft, draftFromCandidate } from '../../core/draft'
+import {
+  type CandidateDraft,
+  candidateFromDraft,
+  draftFromCandidate,
+  whenProblem,
+} from '../../core/draft'
 import { normalizeUrl, shortUrl } from '../../core/links'
 import { moveMessage } from '../../core/move'
 import {
@@ -338,7 +343,7 @@ function LinkFields({
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const normalized = normalizeUrl(url)
-    const missing = !when.date ? 'Date needed' : !when.time ? 'Time needed' : null
+    const missing = whenProblem(when.date, when.time, zone, Date.now())
     setError(normalized ? null : 'Not a web link')
     setWhenError(missing)
     if (!normalized || missing) return
@@ -433,7 +438,7 @@ function MessageFields({
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const missing = !when.date ? 'Date needed' : !when.time ? 'Time needed' : null
+    const missing = whenProblem(when.date, when.time, zone, Date.now())
     setWhenError(missing)
     if (missing) return
     void repo.saveEntry({

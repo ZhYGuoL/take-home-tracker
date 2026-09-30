@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { parseContacts } from '../../core/contacts'
 import { deadlineAt, formatDateTime, zoneName } from '../../core/deadline'
-import { type DraftErrors, validateDraft } from '../../core/draft'
+import { type DraftErrors, validateDraft, whenProblem } from '../../core/draft'
 import type { ExtractContext, KnownCandidate } from '../../core/extract/types'
 import { normalizeUrl } from '../../core/links'
 import { moveMessage } from '../../core/move'
@@ -247,9 +247,10 @@ function Confirm({
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = isNew ? validateDraft(draft.candidate) : {}
+    const at = { zone, now: Date.now() }
+    const found = isNew ? validateDraft(draft.candidate, at) : {}
     const badLinks = draft.links.flatMap((l, i) => (normalizeUrl(l.url) ? [] : [i]))
-    const missing = !draft.messageDate ? 'Date needed' : !draft.messageTime ? 'Time needed' : null
+    const missing = whenProblem(draft.messageDate, draft.messageTime, zone, at.now)
     setErrors(found)
     setLinkErrors(badLinks)
     setWhenError(missing)

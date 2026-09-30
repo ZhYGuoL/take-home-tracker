@@ -74,7 +74,7 @@ export function CandidateForm({
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = validateDraft(draft)
+    const found = validateDraft(draft, { zone, now: Date.now() })
     setErrors(found)
     if (Object.keys(found).length === 0) onSubmit(draft)
   }

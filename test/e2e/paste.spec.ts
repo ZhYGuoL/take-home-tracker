@@ -195,6 +195,23 @@ test('a message moved off the candidate a paste made stays in her Sheet when tha
   await expect(page.getByRole('button', { name: 'Priya Raman' })).toHaveCount(0)
 })
 
+test('a message time later than now is refused until she corrects it', async ({ page }) => {
+  await seed(page, [])
+  // It is 1:00 PM, and the copied chat says 3:00 PM today.
+  const dialog = await paste(
+    page,
+    'Mara Koval\nToday 3:00 PM\nDone! https://tidepool-ex.vercel.app and github.com/ex-mkoval/tidepool',
+  )
+  await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Mara Koval')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog.getByText('Later than now')).toBeVisible()
+  await dialog.getByLabel('Time', { exact: true }).last().fill('12:30')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('dialog', { name: 'Mara Koval' })).toContainText(
+    'Wed, Sep 30, 12:30 PM PDT',
+  )
+})
+
 test('sending the same take-home doc to a second candidate does not attach to the first', async ({
   page,
 }) => {

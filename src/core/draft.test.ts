@@ -6,6 +6,7 @@ import {
   emptyDraft,
   submissionFromDraft,
   validateDraft,
+  whenProblem,
 } from './draft'
 
 const LA = 'America/Los_Angeles'
@@ -23,23 +24,32 @@ describe('emptyDraft', () => {
   })
 })
 
+const check = (d: CandidateDraft) => validateDraft(d, { zone: LA, now })
+
 describe('validateDraft', () => {
   it('needs a name', () => {
-    expect(validateDraft(draft({ name: '  ' })).name).toBe('Required')
+    expect(check(draft({ name: '  ' })).name).toBe('Required')
   })
 
   it('rejects a link that is not a web link', () => {
-    expect(validateDraft(draft({ submissionUrl: 'see message' })).submissionUrl).toBe(
-      'Not a web link',
-    )
+    expect(check(draft({ submissionUrl: 'see message' })).submissionUrl).toBe('Not a web link')
   })
 
   it('needs the time of a submission, because the time decides Late', () => {
-    expect(validateDraft(draft({ submittedDate: '2026-10-01' })).submittedTime).toBe('Time needed')
+    expect(check(draft({ submittedDate: '2026-10-01' })).submittedTime).toBe('Time needed')
+  })
+
+  it('refuses a submission later than now, and a sent date after today', () => {
+    expect(
+      check(draft({ submittedDate: '2026-09-30', submittedTime: '11:00' })).submittedDate,
+    ).toBe('Later than now')
+    expect(check(draft({ sentDate: '2026-10-01', sentTime: '' })).sentDate).toBe('Later than now')
+    // A sent date of today with no time is fine, even in the morning.
+    expect(check(draft({ sentDate: '2026-09-30', sentTime: '' })).sentDate).toBeUndefined()
   })
 
   it('accepts a complete draft', () => {
-    expect(validateDraft(draft({ takeHomeUrl: 'docs.example.com/d/abc' }))).toEqual({})
+    expect(check(draft({ takeHomeUrl: 'docs.example.com/d/abc' }))).toEqual({})
   })
 })
 
@@ -148,5 +158,15 @@ describe('submissionFromDraft', () => {
   it('uses now when the submission has no date', () => {
     const e = submissionFromDraft(draft({ submissionUrl: 'x.example.com' }), LA, c, 'e-1', now)
     expect(e?.at).toBe(new Date(now).toISOString())
+  })
+})
+
+describe('whenProblem', () => {
+  it('names what is missing, or a time later than now, with a minute of slack', () => {
+    expect(whenProblem('', '09:00', LA, now)).toBe('Date needed')
+    expect(whenProblem('2026-09-30', '', LA, now)).toBe('Time needed')
+    expect(whenProblem('2026-09-30', '10:06', LA, now)).toBeNull()
+    expect(whenProblem('2026-09-30', '10:07', LA, now)).toBe('Later than now')
+    expect(whenProblem('2026-09-29', '23:00', LA, now)).toBeNull()
   })
 })

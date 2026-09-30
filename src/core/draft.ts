@@ -71,8 +71,20 @@ function optionalUrl(raw: string): string | null | undefined {
   return normalizeUrl(raw)
 }
 
-export function validateDraft(d: CandidateDraft): DraftErrors {
+/** A minute of slack, for a device clock that runs a little behind. */
+const CLOCK_SLACK_MS = 60_000
+
+/** What is wrong with a date and time for something that already happened, in `zone`. */
+export function whenProblem(date: string, time: string, zone: string, now: number): string | null {
+  if (!date) return 'Date needed'
+  if (!time) return 'Time needed'
+  return Date.parse(instantIn(date, time, zone)) > now + CLOCK_SLACK_MS ? 'Later than now' : null
+}
+
+/** `at` is her zone and the time now: the take-home and the submission cannot be later than now. */
+export function validateDraft(d: CandidateDraft, at: { zone: string; now: number }): DraftErrors {
   const errors: DraftErrors = {}
+  const today = localParts(new Date(at.now).toISOString(), at.zone).date
   if (d.name.trim() === '') errors.name = 'Required'
   for (const key of ['takeHomeUrl', 'submissionUrl', 'repoUrl'] as const) {
     if (optionalUrl(d[key]) === null) errors[key] = 'Not a web link'
@@ -82,6 +94,20 @@ export function validateDraft(d: CandidateDraft): DraftErrors {
   if (d.submittedTime && !d.submittedDate) errors.submittedDate = 'Date needed'
   // A guessed time could make Late wrong, so a submission date needs its time.
   if (d.submittedDate && !d.submittedTime) errors.submittedTime = 'Time needed'
+  // A sent date with no time means noon, so only a later date is wrong.
+  if (
+    d.sentDate &&
+    (d.sentTime ? whenProblem(d.sentDate, d.sentTime, at.zone, at.now) : d.sentDate > today)
+  ) {
+    errors.sentDate = 'Later than now'
+  }
+  if (
+    d.submittedDate &&
+    d.submittedTime &&
+    whenProblem(d.submittedDate, d.submittedTime, at.zone, at.now)
+  ) {
+    errors.submittedDate = 'Later than now'
+  }
   return errors
 }
 
