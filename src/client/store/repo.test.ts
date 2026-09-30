@@ -1,8 +1,6 @@
-import 'fake-indexeddb/auto'
 import { describe, expect, it, vi } from 'vitest'
 import type { StoredRecord } from '../../core/records'
 import { candidate, message, submission } from '../../core/testing/fixtures'
-import { idbPersistence } from './idb'
 import { monotonicClock, type Persistence, Repo } from './repo'
 
 function memory(): Persistence & { saved: StoredRecord[] } {
@@ -115,36 +113,5 @@ describe('Repo save failures', () => {
     p.failNext = 1
     await repo.saveCandidate(candidate({ name: 'Private Name', notes: 'private note' }))
     expect(JSON.stringify(log.mock.calls)).not.toMatch(/Private Name|private note/)
-  })
-})
-
-describe('idbPersistence', () => {
-  it('a new repo on the same account loads what the last one saved', async () => {
-    const c = candidate()
-    await new Repo(idbPersistence('acct-a')).saveCandidate(c)
-    const again = new Repo(idbPersistence('acct-a'))
-    await again.init()
-    expect(again.getSnapshot().candidates).toEqual([c])
-  })
-
-  it('a failed save does not block the next one', async () => {
-    const persistence = idbPersistence('acct-d')
-    const bad = { id: 'x', type: 'candidate', updatedAt: 'not a date' } as unknown as StoredRecord
-    // A record that IndexedDB cannot store makes that one save fail.
-    await expect(
-      persistence.save([{ ...bad, data: { fn: () => 1 } } as unknown as StoredRecord]),
-    ).rejects.toThrow()
-    const c = candidate()
-    await persistence.save([
-      { id: c.id, type: 'candidate', updatedAt: '2026-09-30T10:00:00Z', deleted: false, data: c },
-    ])
-    expect((await persistence.load()).map((r) => r.id)).toEqual([c.id])
-  })
-
-  it('another account on the same browser sees nothing', async () => {
-    await new Repo(idbPersistence('acct-b')).saveCandidate(candidate())
-    const other = new Repo(idbPersistence('acct-c'))
-    await other.init()
-    expect(other.getSnapshot().candidates).toEqual([])
   })
 })

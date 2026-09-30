@@ -210,4 +210,15 @@ describe('SheetSync', () => {
     const sync = new SheetSync(sheet as unknown as SheetsApi, cache, () => [])
     expect((await sync.load()).map((r) => r.id)).toEqual([c.id])
   })
+
+  it('another account on the same browser sees none of the records of the first', async () => {
+    const c = candidate({ name: 'Only Mine' })
+    await localCache('acct-first').setRecords([rec(c)])
+    const other = new SheetSync(
+      memorySheet() as unknown as SheetsApi,
+      localCache('acct-second'),
+      () => [],
+    )
+    expect(await other.load()).toEqual([])
+  })
 })
