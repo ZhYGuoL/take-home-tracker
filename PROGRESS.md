@@ -39,3 +39,16 @@
   - F6: `src/core/filters.test.ts` and `test/e2e/filters.spec.ts`, `test/e2e/filters-combined.spec.ts` (each filter alone, and leave-one-out with one decoy per dimension).
   - `pnpm verify` exit 0: 193 unit tests, 100 e2e tests, 4 skipped as desktop-only.
 - F4, F5, and F6 pass.
+
+## M3 Paste to add - done
+
+- Add opens on Paste. A paste into the empty box is read at once. The confirm step proposes the candidate (name, role, source, contact, take-home link, deadline) and the message (who wrote it, when, links with kinds, needs reply). She corrects any field before Save.
+- A paste that belongs to a known candidate attaches to them (shared contact, own submission or repo link, repo owner, or full name). A first name alone never attaches by default. The attach step shows the contacts it adds.
+- A message on the wrong candidate moves in one step, to another candidate or to a new one. What the paste added goes with it, and a candidate that only existed because of it is removed.
+- The manual path ("By hand") is unchanged and always there.
+- The rules extractor reads Gmail web and app, Outlook, Apple Mail, forwards, LinkedIn, X, Slack, WhatsApp, Telegram, Discord, and plain text, and her own outgoing messages. Zone math moved to `Intl` only (D15).
+- Measurement method recorded in D14. The rules' score on the blind set is recorded with M4.
+- Reviewer findings fixed: a shared doc link attached new candidates to old ones (blocker), hidden attach side effects, weak matches preselected, durations beating dates, deadlines counted from paste time, missing timestamps guessed as now, Gmail outbound without her identity, Outlook quotes, zones outside the US, and three UI nits.
+- Open: the app does not know her name and email until sign-in (M5). Until then, her own messages are recognized by their headers and wording.
+- Evidence: `test/e2e/paste.spec.ts` (F1: prefilled name, links, and date, corrected before saving; F2: a second paste attaches), `src/core/paste.test.ts`, `src/core/move.test.ts`, `src/core/extract/*.test.ts`, `eval/*.test.ts`. `pnpm verify` exit 0: 261 unit tests, 118 e2e tests, 4 skipped as desktop-only.
+- F1 and F2 pass.

@@ -2,12 +2,12 @@
   {
     "id": "F1",
     "description": "Pasting a realistic fictional submission message creates a candidate with name, link, and date prefilled, and she can correct them before saving.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F2",
     "description": "A second paste from the same candidate attaches to that candidate.",
-    "passes": false
+    "passes": true
   },
   {
     "id": "F3",
