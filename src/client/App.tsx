@@ -9,19 +9,22 @@ import {
 import type { Entry } from '../core/types'
 import { CandidateForm } from './components/CandidateForm'
 import { CandidateTable } from './components/CandidateTable'
+import { DetailPanel } from './components/DetailPanel'
 import { Sheet, SheetHeader } from './components/Sheet'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
-import { type Row, useRepo, useRows } from './store/context'
+import { type Row, useLive, useRepo, useRows } from './store/context'
 
 export function App() {
   const repo = useRepo()
   const rows = useRows()
+  const { entries } = useLive()
   const now = useNow()
   const zone = useMemo(viewerZone, [])
   const search = new URLSearchParams(useSearch())
   const openId = search.get('c')
   const adding = search.get('new') === '1'
+  const openRow = rows.find((r) => r.candidate.id === openId) ?? null
   const roles = useMemo(
     () => [...new Set(rows.map((r) => r.candidate.role).filter(Boolean))].sort(),
     [rows],
@@ -37,7 +40,7 @@ export function App() {
     const sub = submissionFromDraft(draft, zone, candidate, newId(), t)
     if (sub) items.push(sub)
     void repo.saveAll(items)
-    close('new')
+    navigate({ new: null, c: candidate.id }, 'replace')
   }
 
   const sorted = useMemo(
@@ -93,6 +96,25 @@ export function App() {
           />
         )}
       </main>
+      {openRow && (
+        <Sheet
+          key={openRow.candidate.id}
+          label={openRow.candidate.name}
+          variant="drawer"
+          onClose={() => close('c')}
+        >
+          <DetailPanel
+            row={openRow}
+            entries={entries}
+            now={now}
+            zone={zone}
+            roles={roles}
+            onClose={() => close('c')}
+            onOpenSubmission={openSubmission}
+            onDeleted={() => close('c')}
+          />
+        </Sheet>
+      )}
       {adding && (
         <Sheet label="Add candidate" variant="dialog" onClose={() => close('new')}>
           <SheetHeader title="Add candidate" onClose={() => close('new')} />

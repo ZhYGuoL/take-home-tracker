@@ -30,4 +30,10 @@ export async function addCandidate(page: Page, c: NewCandidate) {
   if (c.submission) await dialog.getByLabel('Submission link', { exact: true }).fill(c.submission)
   await dialog.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(dialog).toBeHidden()
+  // The new candidate opens in its detail panel.
+  return page.getByRole('dialog', { name: c.name })
+}
+
+export function stageRadio(page: Page, name: string) {
+  return page.getByRole('radiogroup', { name: 'Stage' }).getByRole('radio', { name, exact: true })
 }
