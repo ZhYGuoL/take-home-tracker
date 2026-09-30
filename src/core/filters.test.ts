@@ -20,7 +20,7 @@ const NOW = Date.parse('2026-10-05T19:00:00Z') // Mon Oct 5, 12:00 PDT
 
 function row(c: Candidate, entries: Entry[]): FactRow {
   const derived = derive(c, entries)
-  const flags = flagsOf(c, derived, entries, NOW)
+  const flags = flagsOf(c, derived, NOW)
   return { candidate: c, derived, flags, needsYou: needsYou(derived, flags) }
 }
 

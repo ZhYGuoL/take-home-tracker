@@ -4,14 +4,14 @@ import { derive } from './derive'
 import type { FactRow } from './filters'
 import { flagsOf, needsYou } from './flags'
 import { sortRows } from './sort'
-import { candidate, message, submission } from './testing/fixtures'
+import { candidate, message, opened, submission } from './testing/fixtures'
 import type { Candidate, Entry } from './types'
 
 const NOW = Date.parse('2026-10-05T19:00:00Z')
 
 function row(c: Candidate, entries: Entry[]): FactRow {
   const derived = derive(c, entries)
-  const flags = flagsOf(c, derived, entries, NOW)
+  const flags = flagsOf(c, derived, NOW)
   return { candidate: c, derived, flags, needsYou: needsYou(derived, flags) }
 }
 
@@ -50,6 +50,23 @@ describe('sortRows', () => {
         .map((r) => r.candidate.name)
         .slice(0, 2),
     ).toEqual(['New submission', 'New question'])
+  })
+
+  it('orders waiting replies by when the question came in, not by later activity', () => {
+    const early = candidate({ name: 'Early question', createdAt: '2026-09-01T00:00:00Z' })
+    const late = candidate({ name: 'Late question', createdAt: '2026-09-01T00:00:00Z' })
+    const both = [
+      row(late, [message(late, '2026-10-04T09:00:00Z', { needsReply: true })]),
+      row(early, [
+        submission(early, '2026-10-02T09:00:00Z'),
+        message(early, '2026-10-03T09:00:00Z', { needsReply: true }),
+        opened(early, '2026-10-05T09:00:00Z'),
+      ]),
+    ]
+    expect(sortRows(both, 'needs').map((r) => r.candidate.name)).toEqual([
+      'Early question',
+      'Late question',
+    ])
   })
 
   it('does not change its input', () => {

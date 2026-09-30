@@ -4,7 +4,7 @@ const time = (iso: string | null | undefined) => (iso ? Date.parse(iso) : Number
 
 function urgency(r: FactRow): [number, number] {
   if (r.flags.overdue) return [0, time(r.candidate.deadline?.at)]
-  if (r.flags.needsReply) return [1, time(r.derived.lastActivityAt)]
+  if (r.flags.needsReply) return [1, time(r.derived.waitingSince)]
   if (r.derived.stage === 'submitted') return [2, time(r.derived.submittedAt)]
   return [3, -time(r.derived.lastActivityAt)]
 }

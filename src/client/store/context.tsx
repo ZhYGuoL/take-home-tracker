@@ -36,7 +36,7 @@ export function useRows(now: number): Row[] {
     () =>
       candidates.map((candidate) => {
         const derived = derive(candidate, entries)
-        const flags = flagsOf(candidate, derived, entries, now)
+        const flags = flagsOf(candidate, derived, now)
         return { candidate, derived, flags, needsYou: needsYou(derived, flags) }
       }),
     [candidates, entries, now],

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { deadlineAt } from './deadline'
 import { derive } from './derive'
-import { awaitingReply, flagsOf, needsYou } from './flags'
+import { flagsOf, needsYou } from './flags'
 import { candidate, message, opened, replied, stage, submission } from './testing/fixtures'
 import type { Candidate, Entry } from './types'
 
@@ -10,7 +10,7 @@ const due = deadlineAt('2026-10-02', '17:00', 'America/New_York')
 const DUE = Date.parse(due.at)
 
 function flags(c: Candidate, entries: Entry[], now: number) {
-  return flagsOf(c, derive(c, entries), entries, now)
+  return flagsOf(c, derive(c, entries), now)
 }
 
 describe('Late', () => {
@@ -73,6 +73,15 @@ describe('Overdue', () => {
     expect(f.late).toBe(true)
   })
 
+  it('is off once she set Submitted or Reviewing by hand, and Late then uses that time', () => {
+    for (const s of ['submitted', 'reviewing'] as const) {
+      const lateByHand = new Date(DUE + 60_000).toISOString()
+      const f = flags(c, [stage(c, lateByHand, s)], DUE + 120_000)
+      expect(f.overdue).toBe(false)
+      expect(f.late).toBe(true)
+    }
+  })
+
   it('is off for an Advanced or Passed candidate', () => {
     for (const s of ['advanced', 'passed'] as const) {
       expect(flags(c, [stage(c, '2026-10-01T00:00:00Z', s)], DUE + 1).overdue).toBe(false)
@@ -92,6 +101,7 @@ describe('Overdue', () => {
 
 describe('Needs reply', () => {
   const c = candidate()
+  const awaitingReply = (_id: string, entries: Entry[]) => derive(c, entries).waitingSince !== null
   const ask = (at: string) => message(c, at, { text: 'can I use Postgres?', needsReply: true })
 
   it('is on when her latest inbound message asks for a reply', () => {
@@ -121,6 +131,10 @@ describe('Needs reply', () => {
   it('a later inbound message that needs nothing clears it', () => {
     const fyi = message(c, '2026-10-01T12:00:00Z', { text: 'never mind, figured it out' })
     expect(awaitingReply(c.id, [ask('2026-10-01T10:00:00Z'), fyi])).toBe(false)
+  })
+
+  it('knows when the waiting message came in', () => {
+    expect(derive(c, [ask('2026-10-01T10:00:00Z')]).waitingSince).toBe('2026-10-01T10:00:00Z')
   })
 
   it('stage changes and opening the submission do not clear it', () => {
@@ -164,13 +178,13 @@ describe('needsYou', () => {
       const c = candidate({ deadline: deadlineAt('2026-10-09', '17:00', 'America/New_York') })
       const entries = make(c)
       const d = derive(c, entries)
-      expect(needsYou(d, flagsOf(c, d, entries, now))).toBe(expected)
+      expect(needsYou(d, flagsOf(c, d, now))).toBe(expected)
     })
   }
 
   it('Overdue shows', () => {
     const c = candidate({ deadline: due })
     const d = derive(c, [])
-    expect(needsYou(d, flagsOf(c, d, [], now))).toBe(true)
+    expect(needsYou(d, flagsOf(c, d, now))).toBe(true)
   })
 })

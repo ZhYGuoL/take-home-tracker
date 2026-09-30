@@ -2,11 +2,19 @@ import type { Candidate, Entry, Link, Stage } from './types'
 
 export interface Derived {
   stage: Stage
-  /** The first inbound message that carried a submission or repo link. */
+  /**
+   * When the work came in: the first inbound message with a submission or repo link, or the
+   * first time she set Submitted or Reviewing by hand, such as for a zip sent by email.
+   */
   submittedAt: string | null
   submission: Link | null
   repo: Link | null
   lastActivityAt: string
+  /**
+   * When the message that waits on her came in: the latest message is inbound and needs a
+   * reply, and no reply mark or outbound message comes after it (D7). Null when nothing waits.
+   */
+  waitingSince: string | null
 }
 
 export function byTime(a: { at: string; id: string }, b: { at: string; id: string }): number {
@@ -27,11 +35,13 @@ export function derive(candidate: Candidate, entries: readonly Entry[]): Derived
   let submission: Link | null = null
   let repo: Link | null = null
   let lastActivityAt = candidate.createdAt
+  let waitingSince: string | null = null
 
   for (const e of own) {
     if (Date.parse(e.at) > Date.parse(lastActivityAt)) lastActivityAt = e.at
     switch (e.kind) {
       case 'message': {
+        waitingSince = e.direction === 'in' && e.needsReply ? e.at : null
         if (e.direction !== 'in') break
         const sub = e.links.find((l) => l.kind === 'submission')
         const rep = e.links.find((l) => l.kind === 'repo')
@@ -47,11 +57,13 @@ export function derive(candidate: Candidate, entries: readonly Entry[]): Derived
         break
       case 'stage':
         stage = e.stage
+        if (stage === 'submitted' || stage === 'reviewing') submittedAt ??= e.at
         break
       case 'replied':
+        waitingSince = null
         break
     }
   }
 
-  return { stage, submittedAt, submission, repo, lastActivityAt }
+  return { stage, submittedAt, submission, repo, lastActivityAt, waitingSince }
 }
