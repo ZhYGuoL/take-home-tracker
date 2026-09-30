@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it, vi } from 'vitest'
 import type { StoredRecord } from '../../core/records'
-import { candidate, submission } from '../../core/testing/fixtures'
+import { candidate, message, submission } from '../../core/testing/fixtures'
 import { idbPersistence } from './idb'
 import { monotonicClock, type Persistence, Repo } from './repo'
 
@@ -47,6 +47,17 @@ describe('Repo', () => {
     expect(repo.getSnapshot().entries).toHaveLength(1)
     await repo.deleteCandidate(c)
     expect(repo.getSnapshot()).toEqual({ candidates: [], entries: [] })
+  })
+
+  it('a deleted candidate leaves no name, contact, note, or message behind', async () => {
+    const p = memory()
+    const repo = new Repo(p)
+    const c = candidate({ name: 'Private Name', contacts: ['private@example.com'], notes: 'n' })
+    await repo.saveAll([c, message(c, '2026-09-30T10:00:00Z', { text: 'private text' })])
+    await repo.deleteCandidate(c)
+    const stored = new Map(p.saved.map((r) => [r.id, r]))
+    expect([...stored.values()].every((r) => r.deleted && r.data === null)).toBe(true)
+    expect(JSON.stringify([...stored.values()])).not.toMatch(/Private|private/)
   })
 
   it('keeps the same snapshot object until something changes', async () => {

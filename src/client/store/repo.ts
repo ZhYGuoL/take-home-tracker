@@ -70,9 +70,12 @@ export class Repo {
     ])
   }
 
+  /** Deletes the candidate and every entry on its timeline. */
   deleteCandidate(c: Candidate): Promise<void> {
+    const own = this.snapshot.entries.filter((e) => e.candidateId === c.id)
     return this.write([
-      { id: c.id, type: 'candidate', updatedAt: this.clock(), deleted: true, data: c },
+      ...own.map((e) => this.tombstone(e.id, 'entry')),
+      this.tombstone(c.id, 'candidate'),
     ])
   }
 
@@ -83,9 +86,7 @@ export class Repo {
   }
 
   deleteEntry(e: Entry): Promise<void> {
-    return this.write([
-      { id: e.id, type: 'entry', updatedAt: this.clock(), deleted: true, data: e },
-    ])
+    return this.write([this.tombstone(e.id, 'entry')])
   }
 
   /** Saves several records as one change, such as a new candidate and its first message. */
@@ -98,6 +99,10 @@ export class Repo {
           : { id: data.id, type: 'candidate', updatedAt, deleted: false, data }
       }),
     )
+  }
+
+  private tombstone(id: string, type: 'candidate' | 'entry'): StoredRecord {
+    return { id, type, updatedAt: this.clock(), deleted: true, data: null }
   }
 
   private write(changed: StoredRecord[]): Promise<void> {

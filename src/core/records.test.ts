@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { live, mergeRecords, type StoredRecord } from './records'
 import { candidate, submission } from './testing/fixtures'
 
-function cand(name: string, updatedAt: string, deleted = false): StoredRecord {
-  return { id: 'c-1', type: 'candidate', updatedAt, deleted, data: candidate({ id: 'c-1', name }) }
+function cand(name: string, updatedAt: string): StoredRecord {
+  return {
+    id: 'c-1',
+    type: 'candidate',
+    updatedAt,
+    deleted: false,
+    data: candidate({ id: 'c-1', name }),
+  }
 }
 
 describe('mergeRecords', () => {
@@ -48,7 +54,7 @@ describe('live', () => {
         type: 'candidate',
         updatedAt: '2026-09-30T10:00:00Z',
         deleted: true,
-        data: gone,
+        data: null,
       },
     ]
     for (const c of [kept, gone]) {

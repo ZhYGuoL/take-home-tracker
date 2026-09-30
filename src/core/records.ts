@@ -1,8 +1,18 @@
 import type { Candidate, Entry } from './types'
 
 export type StoredRecord =
-  | { id: string; type: 'candidate'; updatedAt: string; deleted: boolean; data: Candidate }
-  | { id: string; type: 'entry'; updatedAt: string; deleted: boolean; data: Entry }
+  | { id: string; type: 'candidate'; updatedAt: string; deleted: false; data: Candidate }
+  | { id: string; type: 'entry'; updatedAt: string; deleted: false; data: Entry }
+  | Tombstone
+
+/** A deleted record keeps only its id and type, so no personal data stays behind (D3). */
+export interface Tombstone {
+  id: string
+  type: 'candidate' | 'entry'
+  updatedAt: string
+  deleted: true
+  data: null
+}
 
 /** True when `b` replaces `a`: newer wins, and a tie resolves the same way on every device (D3). */
 export function replaces(a: StoredRecord, b: StoredRecord): boolean {
