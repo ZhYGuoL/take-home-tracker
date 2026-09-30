@@ -23,6 +23,8 @@ const URL_RE =
 export function findUrls(text: string): string[] {
   const out: string[] = []
   for (const m of text.matchAll(URL_RE)) {
+    // The part of an email address before the "@" is not a link.
+    if (text[(m.index ?? 0) + m[0].length] === '@') continue
     const raw = m[0].replace(/[.,;:!?)\]}'"]+$/, '')
     // A closing parenthesis inside the link stays when the link opened one.
     const balanced = raw.includes('(') && m[0].endsWith(')') ? `${raw})` : raw
@@ -38,7 +40,18 @@ export function withoutUrls(text: string): string {
 }
 
 const REPO_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org', 'codeberg.org']
-const DOC_HOSTS = ['docs.google.com', 'drive.google.com', 'notion.so', 'notion.site', 'coda.io']
+const DOC_HOSTS = ['docs.google.com', 'notion.so', 'notion.site', 'coda.io']
+/** Profiles, designs, and scheduling pages: never the work itself. */
+const OTHER_HOSTS = [
+  'linkedin.com',
+  'figma.com',
+  'calendly.com',
+  'cal.com',
+  'x.com',
+  'twitter.com',
+  'zoom.us',
+  'meet.google.com',
+]
 const DEPLOY_SUFFIXES = [
   'vercel.app',
   'netlify.app',
@@ -71,7 +84,14 @@ export function linkKind(url: string, context: string): LinkKind {
   const host = hostOf(url)
   const path = new URL(url).pathname.split('/').filter(Boolean)
   if (REPO_HOSTS.some((h) => isOn(host, h))) return path.length >= 2 ? 'repo' : 'other'
+  if (OTHER_HOSTS.some((h) => isOn(host, h))) return 'other'
   if (DOC_HOSTS.some((h) => isOn(host, h))) return 'doc'
+  // A Drive file is a recorded demo when the sender says so, and the take-home document otherwise.
+  if (isOn(host, 'drive.google.com')) {
+    return /\b(walkthrough|video|demo|recording|recorded|screencast)\b/i.test(context)
+      ? 'submission'
+      : 'doc'
+  }
   if (DEPLOY_SUFFIXES.some((s) => isOn(host, s))) return 'submission'
   if (VIDEO_HOSTS.some((h) => isOn(host, h))) return 'submission'
   if (/^(docs|developer|developers|api)\./.test(host) || path[0] === 'docs') return 'other'

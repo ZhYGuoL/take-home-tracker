@@ -30,6 +30,9 @@ describe('linkKind', () => {
     ['https://app.vercel.app', 'submission'],
     ['https://www.loom.com/share/abc', 'submission'],
     ['https://developer.example.com/docs/api', 'other'],
+    ['https://www.linkedin.com/in/ex-someone', 'other'],
+    ['https://www.figma.com/design/abc/Flows', 'other'],
+    ['https://calendly.com/ex-jo/debrief', 'other'],
   ])('%s is %s', (url, kind) => {
     expect(linkKind(url, '')).toBe(kind)
   })
@@ -37,6 +40,14 @@ describe('linkKind', () => {
   it('a custom domain is a submission only when the sender says it is done or live', () => {
     expect(linkKind('https://pantry.example.dev', 'all done here')).toBe('submission')
     expect(linkKind('https://pantry.example.dev', 'is this ok to use')).toBe('other')
+  })
+})
+
+describe('a Drive file', () => {
+  it('is a submission when it is a recorded demo, and the take-home document otherwise', () => {
+    const url = 'https://drive.google.com/file/d/1x/view'
+    expect(linkKind(url, 'I recorded a walkthrough')).toBe('submission')
+    expect(linkKind(url, 'here is the brief')).toBe('doc')
   })
 })
 

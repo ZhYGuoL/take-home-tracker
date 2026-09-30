@@ -12,11 +12,11 @@ describe('parseStamp', () => {
     ['9/30/26, 11:16 AM', '2026-09-30T18:16:00.000Z'],
     ['Oct 2, 2026, 12:00 PM', '2026-10-02T19:00:00.000Z'],
   ])('%s', (text, iso) => {
-    expect(parseStamp(text, LA)).toBe(iso)
+    expect(parseStamp(text, NOW, LA)).toBe(iso)
   })
 
   it('reads 12 AM as midnight', () => {
-    expect(parseStamp('Oct 2, 2026 at 12:30 AM', LA)).toBe('2026-10-02T07:30:00.000Z')
+    expect(parseStamp('Oct 2, 2026 at 12:30 AM', NOW, LA)).toBe('2026-10-02T07:30:00.000Z')
   })
 })
 
@@ -49,5 +49,42 @@ describe('parseDeadline', () => {
 
   it('finds nothing in a message without a deadline', () => {
     expect(parseDeadline('thanks, talk soon', NOW, LA)).toBeNull()
+  })
+})
+
+describe('parseDeadline reads only the deadline she sets', () => {
+  it('skips her own promise to get back to the candidate', () => {
+    expect(parseDeadline('I will get back to you by Friday with next steps.', NOW, LA)).toBeNull()
+  })
+
+  it.each([
+    ['Your new deadline is Monday, October 19 at 5:00 PM ET.', '2026-10-19T21:00:00.000Z'],
+    [
+      "Let's move your deadline to Monday 9am PT so you have the weekend.",
+      '2026-10-05T16:00:00.000Z',
+    ],
+    ["It's due 10/9, and text me if you get stuck!", '2026-10-10T06:59:59.999Z'],
+    ['Please send it by noon on Thursday the 22nd.', '2026-10-22T19:00:00.000Z'],
+    [
+      'Please send your repo by Friday, October 16 (Pacific time, since the team is in Seattle).',
+      '2026-10-17T06:59:59.999Z',
+    ],
+    ['Could you aim for end of day Friday ET?', '2026-10-03T03:59:59.999Z'],
+  ])('%s', (text, iso) => {
+    expect(parseDeadline(text, NOW, LA)?.at).toBe(iso)
+  })
+})
+
+describe('parseStamp reads more formats', () => {
+  it.each([
+    ['October 9, 2026 at 11:52:18 PM EDT', '2026-10-10T03:52:18.000Z'],
+    ['Fri, Sep 25, 9:14 AM (5 days ago)', '2026-09-25T16:14:00.000Z'],
+    ['14/10/2026, 17:05:11', '2026-10-15T00:05:11.000Z'],
+  ])('%s', (text, iso) => {
+    expect(parseStamp(text, NOW, LA)).toBe(iso)
+  })
+
+  it('reads a day-first date outside the US', () => {
+    expect(parseStamp('3/10/2026, 09:00', NOW, 'Europe/London')).toBe('2026-10-03T08:00:00.000Z')
   })
 })
