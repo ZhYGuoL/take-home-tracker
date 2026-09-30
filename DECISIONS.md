@@ -290,11 +290,13 @@ It adds stored state to a Worker that has none, for a limit that the OpenRouter 
 
 ## D14. How extraction is measured
 
-**Choice.** Two fictional test sets, with different jobs.
-- `eval/cases.ts` (38 cases) is the development set.
+**Choice.** Three fictional test sets, with different jobs.
+- `eval/cases.ts` (38 cases) is the first development set.
   The rules were written while reading it, so it only guards against regressions.
-- `eval/holdout.ts` (40 cases) is the held-out set.
-  A separate agent wrote it without seeing the extractor or the development set.
+- `eval/holdout.ts` (40 cases) was written blind by a separate agent.
+  Its first run measured the first rules: name 14 of 39, source 10 of 32, message time 7 of 31.
+  It then became the second development set, to improve the rules on real copy formats.
+- `eval/holdout2.ts` (40 cases) was written blind by another agent, after the rules stopped changing for it.
   Every accuracy number in this file comes from it.
 
 A case checks only the fields that the paste states, plus the fields where "nothing" is the right answer: no links, no deadline, no match, no reply needed.
