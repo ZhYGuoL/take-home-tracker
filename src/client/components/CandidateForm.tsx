@@ -63,17 +63,39 @@ export function CandidateForm({
 }: Props) {
   const [draft, setDraft] = useState(initial)
   const [errors, setErrors] = useState<DraftErrors>({})
-  const zones = useMemo(() => zoneOptions(zone, initial.dueZone), [zone, initial.dueZone])
   const rolesId = useId()
   const now = useMemo(() => new Date().toISOString(), [])
+  const zones = useMemo(
+    () =>
+      zoneOptions(zone, initial.dueZone).map((z) => ({
+        value: z,
+        label: `${z.replaceAll('_', ' ')} · ${zoneName(now, z)}`,
+      })),
+    [zone, initial.dueZone, now],
+  )
+  /** The instant a preset chose. A zone change then keeps this instant. Typing clears it. */
+  const [presetAt, setPresetAt] = useState<string | null>(null)
 
   const set = <K extends keyof CandidateDraft>(key: K, value: CandidateDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
 
   const applyPreset = (apply: (from: string, zone: string) => string) => {
     const from = draft.sentDate ? instantIn(draft.sentDate, draft.sentTime || '12:00', zone) : now
-    const due = localParts(apply(from, draft.dueZone), draft.dueZone)
+    const at = apply(from, draft.dueZone)
+    const due = localParts(at, draft.dueZone)
+    setPresetAt(at)
     setDraft((d) => ({ ...d, dueDate: due.date, dueTime: due.time }))
+  }
+
+  const setDueZone = (dueZone: string) => {
+    if (!presetAt) return set('dueZone', dueZone)
+    const due = localParts(presetAt, dueZone)
+    setDraft((d) => ({ ...d, dueZone, dueDate: due.date, dueTime: due.time }))
+  }
+
+  const setDue = (key: 'dueDate' | 'dueTime', value: string) => {
+    setPresetAt(null)
+    set(key, value)
   }
 
   const submit = (e: FormEvent) => {
@@ -155,19 +177,28 @@ export function CandidateForm({
               />
             </Field>
           </div>
+          <Field label="Deadline zone">
+            <select value={draft.dueZone} onChange={(e) => setDueZone(e.target.value)}>
+              {zones.map((z) => (
+                <option key={z.value} value={z.value}>
+                  {z.label}
+                </option>
+              ))}
+            </select>
+          </Field>
           <div className="field-row">
             <Field label="Deadline" error={errors.dueDate}>
               <input
                 type="date"
                 value={draft.dueDate}
-                onChange={(e) => set('dueDate', e.target.value)}
+                onChange={(e) => setDue('dueDate', e.target.value)}
               />
             </Field>
             <Field label="Time">
               <input
                 type="time"
                 value={draft.dueTime}
-                onChange={(e) => set('dueTime', e.target.value)}
+                onChange={(e) => setDue('dueTime', e.target.value)}
               />
             </Field>
           </div>
@@ -185,15 +216,6 @@ export function CandidateForm({
             ))}
           </fieldset>
           <DeadlineReadout draft={draft} zone={zone} />
-          <Field label="Deadline zone">
-            <select value={draft.dueZone} onChange={(e) => set('dueZone', e.target.value)}>
-              {zones.map((z) => (
-                <option key={z} value={z}>
-                  {z.replaceAll('_', ' ')} · {zoneName(now, z)}
-                </option>
-              ))}
-            </select>
-          </Field>
         </fieldset>
 
         {mode === 'add' && (

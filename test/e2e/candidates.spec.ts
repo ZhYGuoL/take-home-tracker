@@ -133,3 +133,16 @@ test('a note survives closing the panel with Escape or the back gesture', async 
   await page.getByRole('button', { name: 'Lena Fischer' }).click()
   await expect(page.getByLabel('Notes')).toHaveValue('Second thought')
 })
+
+test('after a preset, changing the deadline zone keeps the same instant', async ({ page }) => {
+  await page.getByRole('button', { name: 'Add', exact: true }).first().click()
+  const dialog = page.getByRole('dialog', { name: 'Add candidate' })
+  await dialog.getByLabel('Sent', { exact: true }).fill('2026-10-01')
+  await dialog.getByLabel('Time', { exact: true }).first().fill('09:00')
+  await dialog.getByRole('button', { name: '48h' }).click()
+  const readout = dialog.getByRole('status', { name: 'Deadline in your time zone' })
+  await expect(readout).toHaveText('Sat, Oct 3, 9:00 AM PDT')
+  await dialog.getByLabel('Deadline zone').selectOption('America/New_York')
+  await expect(readout).toHaveText('Sat, Oct 3, 9:00 AM PDT')
+  await expect(dialog.getByLabel('Deadline', { exact: true })).toHaveValue('2026-10-03')
+})
