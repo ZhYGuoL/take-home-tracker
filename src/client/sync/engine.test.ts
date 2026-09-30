@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import type { StoredRecord } from '../../core/records'
-import { HEADER } from '../../core/rows'
+import { HEADER, toRow } from '../../core/rows'
 import { candidate, submission } from '../../core/testing/fixtures'
 import { Repo } from '../store/repo'
 import { localCache, SheetSync } from './engine'
@@ -27,6 +27,15 @@ function memorySheet() {
         throw new Error('google 503')
       }
       rows.push(...add)
+    },
+    lock: 'unlocked',
+    async tryLock(_: Spreadsheet, token: string) {
+      if (api.lock !== 'unlocked') return false
+      api.lock = token
+      return true
+    },
+    async unlock(_: Spreadsheet, token: string) {
+      if (api.lock === token) api.lock = 'unlocked'
     },
     async deleteRows(_: Spreadsheet, indexes: number[]) {
       for (const i of [...indexes].sort((a, b) => b - a)) rows.splice(i, 1)
@@ -199,6 +208,63 @@ describe('SheetSync', () => {
     sheet.readRows = read
     await saving
     expect(repo.getSnapshot().candidates.map((c) => c.name)).toEqual(['Mid Pull'])
+  })
+
+  it('two pulls at once run as one, so a purge never deletes a row twice', async () => {
+    const sheet = memorySheet()
+    const gone = candidate({ name: 'Gone Gil' })
+    const kept = candidate({ name: 'Kept Kay' })
+    sheet.rows.push(toRow(rec(gone)), toRow(rec(kept)), [
+      gone.id,
+      'candidate',
+      '2026-09-30T09:01:00.000Z',
+      '1',
+      '',
+    ])
+    const { sync } = device(sheet)
+    await Promise.all([sync.pull(), sync.pull()])
+    expect(JSON.stringify(sheet.rows)).toContain('Kept Kay')
+    expect(JSON.stringify(sheet.rows)).not.toContain('Gone Gil')
+  })
+
+  it('two devices purging at once never delete another candidate', async () => {
+    const sheet = memorySheet()
+    const gone = candidate({ name: 'Gone Gil' })
+    const kept = candidate({ name: 'Kept Kay' })
+    sheet.rows.push(toRow(rec(gone)), toRow(rec(kept)), [
+      gone.id,
+      'candidate',
+      '2026-09-30T09:01:00.000Z',
+      '1',
+      '',
+    ])
+    // Each read waits a moment for a second one, so both devices see the same rows.
+    const read = sheet.readRows
+    let waiting: (() => void) | null = null
+    sheet.readRows = async () => {
+      const rows = await read()
+      if (waiting) {
+        const other = waiting
+        waiting = null
+        other()
+      } else {
+        await new Promise<void>((resolve) => {
+          waiting = resolve
+          setTimeout(() => {
+            if (waiting === resolve) waiting = null
+            resolve()
+          }, 20)
+        })
+      }
+      return rows
+    }
+    const a = device(sheet)
+    const b = device(sheet)
+    await Promise.all([a.sync.pull(), b.sync.pull()])
+    await Promise.all([a.sync.pull(), b.sync.pull()])
+    expect(JSON.stringify(sheet.rows)).toContain('Kept Kay')
+    expect(JSON.stringify(sheet.rows)).not.toContain('Gone Gil')
+    expect(sheet.lock).toBe('unlocked')
   })
 
   it('a save that has not gone out survives a pull', async () => {

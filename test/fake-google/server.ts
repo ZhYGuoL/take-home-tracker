@@ -105,14 +105,34 @@ function issue(person: Person, withRefresh: boolean, drive = true) {
 }
 
 /** "'records'!A2:Z" or "records" to a tab name and a first row index (0-based). */
-function parseRange(range: string): { tab: string; startRow: number } {
+interface Range {
+  tab: string
+  startRow: number
+  /** Past the last row, or null for every row. */
+  endRow: number | null
+  startCol: number
+  endCol: number
+}
+
+const column = (letters: string) => letters.charCodeAt(0) - 65
+
+/** "'records'!A2:Z", "'records'!Z1", or "records" to a tab and 0-based bounds. */
+function parseRange(range: string): Range {
   const text = decodeURIComponent(range)
   const at = text.lastIndexOf('!')
   const raw = at < 0 ? text : text.slice(0, at)
   const cells = at < 0 ? '' : text.slice(at + 1)
   const tab = raw.startsWith("'") ? raw.slice(1, -1).replaceAll("''", "'") : raw
-  const m = cells ? /^[A-Z]+(\d+)/.exec(cells) : null
-  return { tab, startRow: m ? Number(m[1]) - 1 : 0 }
+  const m = /^([A-Z])(\d+)?(?::([A-Z])(\d+)?)?$/.exec(cells)
+  if (!m) return { tab, startRow: 0, endRow: null, startCol: 0, endCol: 26 }
+  const one = m[3] === undefined
+  return {
+    tab,
+    startRow: m[2] ? Number(m[2]) - 1 : 0,
+    endRow: one ? (m[2] ? Number(m[2]) : null) : m[4] ? Number(m[4]) : null,
+    startCol: column(m[1] ?? 'A'),
+    endCol: column(m[3] ?? m[1] ?? 'Z') + 1,
+  }
 }
 
 function sheetFor(req: IncomingMessage, id: string): { sheet: Sheet; person: Person } | number {
@@ -180,7 +200,16 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       }
       state.sheets.set(id, sheet)
     }
-    sheet.tabs.set('records', [['id', 'type', 'updated_at', 'deleted', 'data'], ...body.rows])
+    const header = [
+      'id',
+      'type',
+      'updated_at',
+      'deleted',
+      'data',
+      ...Array(20).fill(''),
+      'unlocked',
+    ]
+    sheet.tabs.set('records', [header, ...body.rows])
     return send(res, 200, { id: sheet.id }, origin)
   }
   // She removed the app from her Google account: every token of hers stops working.
@@ -367,12 +396,15 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (values) {
     const found = sheetFor(req, values[1] ?? '')
     if (typeof found === 'number') return send(res, found, { error: { code: found } }, origin)
-    const { tab, startRow } = parseRange(values[2] ?? '')
+    const { tab, startRow, endRow, startCol, endCol } = parseRange(values[2] ?? '')
     const rows = found.sheet.tabs.get(tab)
     if (!rows) return send(res, 400, { error: { code: 400, message: 'no such tab' } }, origin)
     const op = values[3]
     if (req.method === 'GET' && !op) {
-      const slice = rows.slice(startRow)
+      const slice = rows
+        .slice(startRow, endRow ?? undefined)
+        .map((r) => r.slice(startCol, endCol))
+        .filter((r, i, all) => i < all.length - 1 || r.some(Boolean))
       return send(
         res,
         200,
@@ -396,7 +428,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (req.method === 'PUT' && !op) {
       const body = JSON.parse(await readBody(req)) as { values: string[][] }
       body.values.forEach((r, i) => {
-        rows[startRow + i] = r.map(String)
+        const row = [...(rows[startRow + i] ?? [])]
+        r.forEach((v, j) => {
+          row[startCol + j] = String(v)
+        })
+        rows[startRow + i] = Array.from(row, (v) => v ?? '')
       })
       return send(res, 200, { updatedRows: body.values.length }, origin)
     }
@@ -410,17 +446,47 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         deleteDimension?: {
           range: { sheetId?: number; dimension: string; startIndex: number; endIndex: number }
         }
+        findReplace?: {
+          find: string
+          replacement: string
+          matchEntireCell?: boolean
+          range: {
+            sheetId: number
+            startRowIndex: number
+            endRowIndex: number
+            startColumnIndex: number
+            endColumnIndex: number
+          }
+        }
       }>
     }
     const titleOf = (sheetId: number) =>
       [...found.sheet.ids].find(([, id]) => id === sheetId)?.[0] ?? ''
-    for (const r of body.requests) {
+    // Like Sheets, the requests run in order, and no other change runs between them.
+    const replies = body.requests.map((r) => {
       const d = r.deleteDimension
-      if (d?.range.dimension !== 'ROWS') continue
-      const rows = found.sheet.tabs.get(titleOf(d.range.sheetId ?? 0))
-      rows?.splice(d.range.startIndex, d.range.endIndex - d.range.startIndex)
-    }
-    return send(res, 200, { replies: [] }, origin)
+      if (d?.range.dimension === 'ROWS') {
+        const rows = found.sheet.tabs.get(titleOf(d.range.sheetId ?? 0))
+        rows?.splice(d.range.startIndex, d.range.endIndex - d.range.startIndex)
+        return {}
+      }
+      const f = r.findReplace
+      if (!f) return {}
+      const rows = found.sheet.tabs.get(titleOf(f.range.sheetId)) ?? []
+      let occurrencesChanged = 0
+      for (let i = f.range.startRowIndex; i < f.range.endRowIndex; i++) {
+        const row = rows[i]
+        if (!row) continue
+        for (let j = f.range.startColumnIndex; j < f.range.endColumnIndex; j++) {
+          if (f.matchEntireCell && row[j] === f.find) {
+            row[j] = f.replacement
+            occurrencesChanged++
+          }
+        }
+      }
+      return { findReplace: { occurrencesChanged } }
+    })
+    return send(res, 200, { replies }, origin)
   }
   const meta = /^\/v4\/spreadsheets\/([^/:]+)$/.exec(path)
   if (meta && req.method === 'GET') {

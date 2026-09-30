@@ -57,15 +57,17 @@ describe('SheetsApi.findOrCreate', () => {
       body: {
         sheets: Array<{
           data?: Array<{
-            rowData: Array<{ values: Array<{ userEnteredValue: { stringValue: string } }> }>
+            rowData: Array<{ values: Array<{ userEnteredValue?: { stringValue: string } }> }>
           }>
         }>
       }
     }
     const header = create.body.sheets[0]?.data?.[0]?.rowData[0]?.values.map(
-      (v) => v.userEnteredValue.stringValue,
+      (v) => v.userEnteredValue?.stringValue ?? '',
     )
-    expect(header).toEqual(['id', 'type', 'updated_at', 'deleted', 'data'])
+    expect(header?.slice(0, 5)).toEqual(['id', 'type', 'updated_at', 'deleted', 'data'])
+    // Z1 holds the lock for deleting rows.
+    expect(header?.[25]).toBe('unlocked')
   })
 
   it('two first visits at once keep the oldest file, and put the one they made in the bin', async () => {
@@ -125,5 +127,59 @@ describe('SheetsApi calls', () => {
     const sheet = { id: 's-1', records: { sheetId: 0, title: 'records' }, view: null }
     expect(await api.readRows(sheet)).toEqual([['a']])
     expect(token).toHaveBeenCalledWith(true)
+  })
+})
+
+describe('SheetsApi delete lock', () => {
+  const sheet = { id: 's-1', records: { sheetId: 0, title: 'records' }, view: null }
+
+  function lockGoogle(cell: string) {
+    const calls: Array<{ method: string; url: string; body: unknown }> = []
+    const f = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      calls.push({ method: init?.method ?? 'GET', url, body })
+      const fr = body?.requests?.[0]?.findReplace
+      if (fr) {
+        const hit = fr.find === cell
+        if (hit) cell = fr.replacement
+        return Response.json({ replies: [{ findReplace: { occurrencesChanged: hit ? 1 : 0 } }] })
+      }
+      return Response.json({ values: cell ? [[cell]] : [] })
+    })
+    return { api: new SheetsApi(access, f as unknown as typeof fetch), calls, cell: () => cell }
+  }
+
+  it('takes the lock with one exact find-and-replace in cell Z1', async () => {
+    const g = lockGoogle('unlocked')
+    expect(await g.api.tryLock(sheet, 'locked a 1', 120_000)).toBe(true)
+    expect(g.calls[0]?.body).toEqual({
+      requests: [
+        {
+          findReplace: {
+            find: 'unlocked',
+            replacement: 'locked a 1',
+            matchCase: true,
+            matchEntireCell: true,
+            range: {
+              sheetId: 0,
+              startRowIndex: 0,
+              endRowIndex: 1,
+              startColumnIndex: 25,
+              endColumnIndex: 26,
+            },
+          },
+        },
+      ],
+    })
+    await g.api.unlock(sheet, 'locked a 1')
+    expect(g.cell()).toBe('unlocked')
+  })
+
+  it('leaves a fresh lock alone, and takes over one that is stale', async () => {
+    const fresh = lockGoogle(`locked b ${Date.now()}`)
+    expect(await fresh.api.tryLock(sheet, 'locked a 1', 120_000)).toBe(false)
+    const stale = lockGoogle(`locked b ${Date.now() - 180_000}`)
+    expect(await stale.api.tryLock(sheet, 'locked a 1', 120_000)).toBe(true)
+    expect(stale.cell()).toBe('locked a 1')
   })
 })

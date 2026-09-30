@@ -102,6 +102,8 @@ test('deleting a candidate removes every row of theirs from her Sheet', async ({
   await expect
     .poll(async () => JSON.stringify(await records(page)))
     .not.toMatch(/Delete Me|delete\.me|c-\d+\.example\.com/)
+  // The purge gave the delete lock back.
+  expect((await records(page))[0]?.[25]).toBe('unlocked')
   // One tombstone with no data stays, so an older edit from another device cannot bring it back.
   expect((await records(page)).map((r) => [r[0], r[4] ?? ''])).toEqual([
     ['id', 'data'],

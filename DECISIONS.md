@@ -97,9 +97,12 @@ So the personal data really goes away, and it is not only hidden.
 - A delete sends only the candidate's tombstone, not one per entry.
   A device that has not pulled yet could otherwise hide a message that another device moved away.
   The deleting device forgets the entries at once, so no message text stays on it.
-- The device that deletes purges at once.
-  Any device purges a delete that is older than 10 minutes, in case that device closed first.
-  The wait keeps two devices from deleting rows by position at the same moment.
+- The device that deletes purges at once, and any device purges what a closed tab left.
+- Sheets deletes rows by position, so a purge runs alone.
+  One pull runs at a time in a tab, and one purge at a time in a browser.
+  Across devices, cell Z1 of `records` is a lock: a find-and-replace of "unlocked" is atomic in Sheets, so only one device takes it.
+  A lock older than 2 minutes belonged to a device that stopped, and another device takes it over.
+  Under the lock, the purge reads the rows again before it deletes.
 - The rules are one pure function, `purgePlan` in `src/core/purge.ts`, which reads only the Sheet rows.
 
 A pasted message, a typed message, and notes are each at most 20,000 characters.

@@ -36,6 +36,13 @@ export interface Spreadsheet {
 const RECORDS_ID = 0
 const VIEW_ID = 1
 
+/**
+ * Cell Z1 of the records tab is a lock for deleting rows, which go by position. A find-and-
+ * replace of "unlocked" is atomic in Sheets, so two devices can never both take it (D3).
+ */
+const LOCK_COLUMN = 25
+export const UNLOCKED = 'unlocked'
+
 /** A range on a tab, quoted, so any title she gives the tab still works. */
 const range = (tab: Tab, cells: string) => `'${tab.title.replaceAll("'", "''")}'!${cells}`
 
@@ -135,7 +142,13 @@ export class SheetsApi {
                   startRow: 0,
                   startColumn: 0,
                   rowData: [
-                    { values: HEADER.map((v) => ({ userEnteredValue: { stringValue: v } })) },
+                    {
+                      values: [
+                        ...HEADER.map((v) => ({ userEnteredValue: { stringValue: v } })),
+                        ...Array.from({ length: LOCK_COLUMN - HEADER.length }, () => ({})),
+                        { userEnteredValue: { stringValue: UNLOCKED } },
+                      ],
+                    },
                   ],
                 },
               ],
@@ -162,6 +175,63 @@ export class SheetsApi {
       `${this.access.sheets}/v4/spreadsheets/${sheet.id}/values/${q(range(sheet.records, 'A1:Z'))}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       { method: 'POST', body: JSON.stringify({ values: rows }) },
     )
+  }
+
+  /**
+   * Takes the delete lock with `token`, "locked <device> <ms>". A lock older than `staleMs`
+   * belonged to a device that stopped halfway, and is taken over. False if another has it.
+   */
+  async tryLock(sheet: Spreadsheet, token: string, staleMs: number): Promise<boolean> {
+    if (await this.replaceLock(sheet, UNLOCKED, token)) return true
+    const lock = range(sheet.records, 'Z1')
+    const url = `${this.access.sheets}/v4/spreadsheets/${sheet.id}/values/${q(lock)}`
+    const held = (await this.call<{ values?: string[][] }>(url)).values?.[0]?.[0] ?? ''
+    if (held === '') {
+      // A file made before the lock existed.
+      await this.call(`${url}?valueInputOption=RAW`, {
+        method: 'PUT',
+        body: JSON.stringify({ values: [[UNLOCKED]] }),
+      })
+      return this.replaceLock(sheet, UNLOCKED, token)
+    }
+    const since = Number(held.split(' ')[2])
+    if (Number.isFinite(since) && Date.now() - since > staleMs) {
+      return this.replaceLock(sheet, held, token)
+    }
+    return false
+  }
+
+  async unlock(sheet: Spreadsheet, token: string): Promise<void> {
+    await this.replaceLock(sheet, token, UNLOCKED)
+  }
+
+  /** Replaces the lock cell's exact text. True if it held `from`. */
+  private async replaceLock(sheet: Spreadsheet, from: string, to: string): Promise<boolean> {
+    const res = await this.call<{
+      replies?: Array<{ findReplace?: { occurrencesChanged?: number } }>
+    }>(`${this.access.sheets}/v4/spreadsheets/${sheet.id}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [
+          {
+            findReplace: {
+              find: from,
+              replacement: to,
+              matchCase: true,
+              matchEntireCell: true,
+              range: {
+                sheetId: sheet.records.sheetId,
+                startRowIndex: 0,
+                endRowIndex: 1,
+                startColumnIndex: LOCK_COLUMN,
+                endColumnIndex: LOCK_COLUMN + 1,
+              },
+            },
+          },
+        ],
+      }),
+    })
+    return res.replies?.[0]?.findReplace?.occurrencesChanged === 1
   }
 
   /** Deletes rows by their 0-based index in the tab, last first, so the others keep their place. */

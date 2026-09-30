@@ -63,7 +63,13 @@ test.describe('signed in', () => {
       )
       .toBe(2)
     const avery = (await sheets(page)).find((s) => s.owner === 'fake-avery')
-    expect(avery?.tabs.records?.[0]).toEqual(['id', 'type', 'updated_at', 'deleted', 'data'])
+    expect(avery?.tabs.records?.[0]?.slice(0, 5)).toEqual([
+      'id',
+      'type',
+      'updated_at',
+      'deleted',
+      'data',
+    ])
     expect(avery?.tabs.records?.[1]?.[4]).toContain('Rowan Okafor')
   })
 
