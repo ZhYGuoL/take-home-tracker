@@ -345,7 +345,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     const tabs = [...found.sheet.tabs.values()]
     for (const r of body.requests) {
       const d = r.deleteDimension
-      if (!d || d.range.dimension !== 'ROWS') continue
+      if (d?.range.dimension !== 'ROWS') continue
       const rows = tabs[d.range.sheetId ?? 0]
       rows?.splice(d.range.startIndex, d.range.endIndex - d.range.startIndex)
     }

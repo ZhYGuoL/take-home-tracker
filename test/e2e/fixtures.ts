@@ -5,11 +5,11 @@ import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
  * Every test starts with empty Sheets in the fake Google. Every page stays offline: links to
  * candidate sites get an empty page instead of the network.
  */
-export const test = base.extend<{ fresh: void }>({
+export const test = base.extend<{ fresh: undefined }>({
   fresh: [
     async ({ request }, use) => {
       await request.post(`${FAKE_GOOGLE_URL}/__reset`)
-      await use()
+      await use(undefined)
     },
     { auto: true },
   ],
