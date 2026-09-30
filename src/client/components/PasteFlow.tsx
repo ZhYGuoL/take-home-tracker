@@ -281,7 +281,11 @@ function Confirm({
           </Field>
           {matchVia && draft.target === matchVia.id && (
             <output className="readout" aria-label="Matched on">
-              Matched on <span className="num">{matchVia.via}</span>
+              Matched on{' '}
+              {/* Mono for an address or a number, as everywhere else. A name stays in text. */}
+              <span className={/[@/\d]/.test(matchVia.via) ? 'num' : undefined}>
+                {matchVia.via}
+              </span>
             </output>
           )}
         </fieldset>
