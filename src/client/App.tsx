@@ -20,12 +20,15 @@ import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
 import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
+import { useSession, useSyncStatus } from './store/session-context'
 
 const extract = makeExtractor()
 
 export function App() {
   const repo = useRepo()
   const saveStatus = useSaveStatus()
+  const session = useSession()
+  const syncStatus = useSyncStatus()
   const { candidates, entries } = useLive()
   // Keyed on the deadline values, so an edit to notes does not restart the clock.
   const deadlineKey = candidates.map((c) => c.deadline?.at ?? '').join('|')
@@ -106,6 +109,18 @@ export function App() {
             </button>
           </span>
         )}
+        {saveStatus !== 'failed' && syncStatus === 'offline' && session && (
+          <span className="save-failed" role="status">
+            Not synced
+            <button
+              type="button"
+              className="control small"
+              onClick={() => void session.sync.pull()}
+            >
+              Retry
+            </button>
+          </span>
+        )}
         <button type="button" className="control primary" onClick={() => navigate({ new: '1' })}>
           Add
         </button>
@@ -159,12 +174,20 @@ export function App() {
           roles={roles}
           now={now}
           extract={extract}
-          self={undefined}
+          self={session ? { name: session.user.name, email: session.user.email } : undefined}
           moving={moving}
           onAddByHand={add}
           onSaved={(id) => navigate({ new: null, move: null, c: id }, 'replace')}
           onClose={() => close('new')}
         />
+      )}
+      {session && (
+        <footer className="foot">
+          <span className="muted">{session.user.email}</span>
+          <button type="button" className="text-button" onClick={() => void session.signOut()}>
+            Sign out
+          </button>
+        </footer>
       )}
     </div>
   )

@@ -1,7 +1,9 @@
 import type { Page } from '@playwright/test'
 import { deadlineAt } from '../../src/core/deadline'
 import type { StoredRecord } from '../../src/core/records'
+import { toRow } from '../../src/core/rows'
 import type { Candidate, Entry, Link, Source, Stage } from '../../src/core/types'
+import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
 
 let seq = 0
 const id = (p: string) => `${p}-${++seq}`
@@ -81,24 +83,14 @@ function records(items: Array<Candidate | Entry>): StoredRecord[] {
   )
 }
 
-/** Writes records where the app keeps them, then reloads so the app reads them. */
-export async function seed(page: Page, items: Array<Candidate | Entry>) {
+/**
+ * Writes records into the signed-in person's Sheet in the fake Google, then opens the app,
+ * which reads them. Avery Stone is the person the saved session belongs to.
+ */
+export async function seed(page: Page, items: Array<Candidate | Entry>, sub = 'fake-avery') {
+  const res = await page.request.post(`${FAKE_GOOGLE_URL}/__seed`, {
+    data: { sub, rows: records(items).map(toRow) },
+  })
+  if (!res.ok()) throw new Error(`seed failed: ${res.status()}`)
   await page.goto('/')
-  await page.evaluate(async (recs) => {
-    await new Promise<void>((resolve, reject) => {
-      const open = indexedDB.open('take-home-tracker')
-      open.onupgradeneeded = () => open.result.createObjectStore('records')
-      open.onerror = () => reject(open.error)
-      open.onsuccess = () => {
-        const tx = open.result.transaction('records', 'readwrite')
-        tx.objectStore('records').put(recs, 'records:local')
-        tx.oncomplete = () => {
-          open.result.close()
-          resolve()
-        }
-        tx.onerror = () => reject(tx.error)
-      }
-    })
-  }, records(items))
-  await page.reload()
 }
