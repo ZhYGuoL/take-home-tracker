@@ -75,7 +75,7 @@ test('a second paste from the same candidate attaches to her', async ({ page }) 
   dialog = await paste(page, followUp)
   await expect(dialog.getByLabel('Attach to')).toHaveValue(/.+/)
   await expect(dialog.getByLabel('Attach to').locator('option:checked')).toHaveText('Priya Raman')
-  await expect(dialog.getByRole('status', { name: 'Matched on' })).toHaveText(
+  await expect(dialog.getByRole('status').filter({ hasText: 'Matched on' })).toHaveText(
     'Matched on priya.raman@example.com',
   )
   await expect(dialog.getByLabel('Needs reply')).toBeChecked()

@@ -291,7 +291,7 @@ a.truncate {
 }
 
 /* "due in 1d 7h" stays on one line. The role before it gives way instead. */
-.list-line > .num {
+.list-due {
   flex: none;
   white-space: nowrap;
 }
@@ -627,6 +627,13 @@ a.truncate {
   min-width: 0;
 }
 
+/* On a narrow phone, a narrower label column keeps "Sat, Sep 26, 6:54 PM GMT+9" on one line. */
+@media (max-width: 400px) {
+  .fact {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -903,6 +910,15 @@ a.truncate {
   }
 }
 
+/* A checkbox in a form lines up with the fields above it. */
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
 .option-check {
   width: 16px;
   height: 16px;
@@ -992,6 +1008,11 @@ a.truncate {
   font-family: var(--font-mono);
   letter-spacing: normal;
   line-height: 1.5;
+}
+
+/* The pasted text is raw, so it shows in mono. The hint is prose. */
+.paste-input::placeholder {
+  font-family: var(--font-sans);
 }
 
 .paste-text {

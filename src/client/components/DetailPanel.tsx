@@ -502,7 +502,7 @@ function MessageFields({
         />
       </label>
       {direction === 'in' && (
-        <label className="option">
+        <label className="check-field">
           <input
             className="option-check"
             type="checkbox"

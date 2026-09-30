@@ -280,7 +280,7 @@ function Confirm({
             </select>
           </Field>
           {matchVia && draft.target === matchVia.id && (
-            <output className="readout" aria-label="Matched on">
+            <output className="readout">
               Matched on{' '}
               {/* Mono for an address or a number, as everywhere else. A name stays in text. */}
               <span className={/[@/\d]/.test(matchVia.via) ? 'num' : undefined}>
@@ -373,7 +373,7 @@ function Confirm({
             </button>
           </div>
           {draft.direction === 'in' && (
-            <label className="option">
+            <label className="check-field">
               <input
                 className="option-check"
                 type="checkbox"
@@ -402,7 +402,7 @@ function Confirm({
         {!isNew && due && (
           <fieldset>
             <legend>DEADLINE</legend>
-            <label className="option">
+            <label className="check-field">
               <input
                 className="option-check"
                 type="checkbox"

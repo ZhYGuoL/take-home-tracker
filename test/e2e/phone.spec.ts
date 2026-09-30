@@ -43,7 +43,7 @@ test('no screen scrolls sideways at phone width', async ({ page }, info) => {
     await noSideScroll(page)
     await page.keyboard.press('Escape')
     // The due time stays on one line.
-    const due = page.locator('li.list-item .list-line > .num').first()
+    const due = page.locator('li.list-item .list-due').first()
     expect((await due.boundingBox())?.height ?? 99).toBeLessThanOrEqual(18)
     await page.getByRole('button', { name: 'Alexandra Montgomery-Okonkwo' }).click()
     await noSideScroll(page)

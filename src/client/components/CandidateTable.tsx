@@ -133,7 +133,9 @@ function List({ rows, now, onOpen }: Props) {
                 <span className="truncate">
                   {[c.role, SOURCE_LABELS[c.source]].filter(Boolean).join(' · ')}
                 </span>
-                <span className="num">{d ? `due ${relative(d.at, now)}` : 'no deadline'}</span>
+                <span className={d ? 'list-due num' : 'list-due'}>
+                  {d ? `due ${relative(d.at, now)}` : 'no deadline'}
+                </span>
               </span>
               <FlagBadges flags={row.flags} />
             </button>
