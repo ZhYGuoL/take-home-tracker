@@ -215,3 +215,26 @@ test('a row she just changed stays where it is in the list', async ({ page }, in
     .poll(() => page.locator('.row-name').allInnerTexts())
     .toEqual(['Wen Zhou', 'Vik Rao'])
 })
+
+test('with the model off, adding and moving a candidate by hand works end to end', async ({
+  page,
+}) => {
+  const model = await (await page.request.get('/api/model')).json()
+  expect(model).toEqual({ enabled: false })
+  const detail = await addCandidate(page, {
+    name: 'Ivo Marek',
+    role: 'Founding engineer',
+    contact: 'ivo@example.com',
+    preset: '72h',
+    submission: 'ivo-app.example.com',
+  })
+  await expect(stageButton(page, 'Submitted')).toHaveAttribute('aria-pressed', 'true')
+  await stageButton(page, 'Advanced').click()
+  await detail.getByLabel('Notes').fill('Strong on data modeling')
+  await detail.getByRole('button', { name: 'Close' }).click()
+  await expect(page).not.toHaveURL(/[?&]c=/)
+  await page.reload()
+  await page.getByRole('button', { name: 'Ivo Marek' }).click()
+  await expect(stageButton(page, 'Advanced')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel('Notes')).toHaveValue('Strong on data modeling')
+})
