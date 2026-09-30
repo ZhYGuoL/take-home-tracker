@@ -177,7 +177,7 @@ export function parseDayLine(line: string, now: string, zone: string): string | 
   const today = localParts(now, zone).date
   if (/^today$/i.test(t)) return today
   if (/^yesterday$/i.test(t)) return addDays(today, -1)
-  const m = new RegExp(String.raw`^${NAMED_DATE}$`, 'i').exec(t)
+  const m = new RegExp(`^${NAMED_DATE}$`, 'i').exec(t)
   if (!m) return null
   const mo = monthIndex(m[1] ?? '') + 1
   const day = Number(m[2])
