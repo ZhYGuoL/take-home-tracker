@@ -70,23 +70,30 @@ export function zoneName(iso: string, zone: string): string {
   return parts.find((p) => p.type === 'timeZoneName')?.value ?? zone
 }
 
+function parts(iso: string, zone: string, opts: Intl.DateTimeFormatOptions) {
+  const out: Partial<Record<Intl.DateTimeFormatPartTypes, string>> = {}
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: zone, ...opts })
+  for (const p of fmt.formatToParts(new Date(iso))) out[p.type] = p.value
+  return out
+}
+
+/** "Fri, Oct 2, 2:00 PM". Built from parts, so every browser shows the same shape. */
 export function formatDateTime(iso: string, zone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: zone,
+  const p = parts(iso, zone, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(iso))
+    hourCycle: 'h12',
+  })
+  return `${p.weekday}, ${p.month} ${p.day}, ${p.hour}:${p.minute} ${p.dayPeriod}`
 }
 
+/** "Oct 2". */
 export function formatDate(iso: string, zone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: zone,
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(iso))
+  const p = parts(iso, zone, { month: 'short', day: 'numeric' })
+  return `${p.month} ${p.day}`
 }
 
 /** "in 2d 4h", "3h ago", "now". Same shape in every state. */

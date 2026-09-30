@@ -3,6 +3,8 @@ import {
   deadlineAfterDays,
   deadlineAfterHours,
   deadlineAt,
+  formatDate,
+  formatDateTime,
   instantIn,
   isValidZone,
   localParts,
@@ -91,5 +93,18 @@ describe('relative', () => {
     ['2026-09-28T12:00:00Z', '3d ago'],
   ])('%s is %s', (iso, text) => {
     expect(relative(iso, now)).toBe(text)
+  })
+})
+
+describe('formatting', () => {
+  it('has one shape, built from parts', () => {
+    expect(formatDateTime('2026-10-02T21:00:00Z', 'America/Los_Angeles')).toBe(
+      'Fri, Oct 2, 2:00 PM',
+    )
+    expect(formatDateTime('2026-10-02T21:00:00Z', 'Asia/Tokyo')).toBe('Sat, Oct 3, 6:00 AM')
+    expect(formatDateTime('2026-10-03T07:05:00Z', 'America/Los_Angeles')).toBe(
+      'Sat, Oct 3, 12:05 AM',
+    )
+    expect(formatDate('2026-10-02T21:00:00Z', 'Asia/Tokyo')).toBe('Oct 3')
   })
 })
