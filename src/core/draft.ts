@@ -91,11 +91,23 @@ function instantOf(date: string, time: string, zone: string): string | null {
   return instantIn(date, time || '12:00', zone)
 }
 
+/**
+ * The candidate that a draft describes. When editing, pass the saved candidate as `base`.
+ * A date or time the form did not change keeps its exact saved instant, because a wall-clock
+ * time in the hour that repeats when clocks go back names two instants (D8).
+ */
 export function candidateFromDraft(
   d: CandidateDraft,
   zone: string,
-  base: Pick<Candidate, 'id' | 'createdAt'>,
+  base: Pick<Candidate, 'id' | 'createdAt'> & Partial<Candidate>,
 ): Candidate {
+  const before = base.name !== undefined ? draftFromCandidate(base as Candidate, zone) : null
+  const sentSame = before && before.sentDate === d.sentDate && before.sentTime === d.sentTime
+  const dueSame =
+    before &&
+    before.dueDate === d.dueDate &&
+    before.dueTime === d.dueTime &&
+    before.dueZone === d.dueZone
   return {
     id: base.id,
     createdAt: base.createdAt,
@@ -104,8 +116,12 @@ export function candidateFromDraft(
     source: d.source,
     contacts: parseContacts(d.contacts),
     takeHomeUrl: optionalUrl(d.takeHomeUrl) ?? '',
-    sentAt: instantOf(d.sentDate, d.sentTime, zone),
-    deadline: d.dueDate ? deadlineAt(d.dueDate, d.dueTime || null, d.dueZone) : null,
+    sentAt: sentSame ? (base.sentAt ?? null) : instantOf(d.sentDate, d.sentTime, zone),
+    deadline: dueSame
+      ? (base.deadline ?? null)
+      : d.dueDate
+        ? deadlineAt(d.dueDate, d.dueTime || null, d.dueZone)
+        : null,
     notes: d.notes,
   }
 }

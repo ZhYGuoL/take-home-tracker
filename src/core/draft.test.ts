@@ -89,6 +89,32 @@ describe('candidateFromDraft', () => {
   })
 })
 
+describe('editing keeps exact instants the form did not change', () => {
+  // 1:30 AM on Sun Nov 1 2026 happens twice in Los Angeles. This is the second, PST, one.
+  const secondOneThirty = { at: '2026-11-01T09:30:00.000Z', zone: LA, dateOnly: false }
+
+  it('a name edit keeps a deadline in the repeated hour', () => {
+    const saved = { ...candidateFromDraft(draft(), LA, base), deadline: secondOneThirty }
+    const edited = candidateFromDraft(
+      { ...draftFromCandidate(saved, LA), name: 'Rowan O.' },
+      LA,
+      saved,
+    )
+    expect(edited.deadline).toEqual(secondOneThirty)
+    expect(edited.name).toBe('Rowan O.')
+  })
+
+  it('a changed deadline time is read again', () => {
+    const saved = { ...candidateFromDraft(draft(), LA, base), deadline: secondOneThirty }
+    const edited = candidateFromDraft(
+      { ...draftFromCandidate(saved, LA), dueTime: '09:00' },
+      LA,
+      saved,
+    )
+    expect(edited.deadline?.at).toBe('2026-11-01T17:00:00.000Z')
+  })
+})
+
 describe('submissionFromDraft', () => {
   const c = candidateFromDraft(draft(), LA, base)
 
