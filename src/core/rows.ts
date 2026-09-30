@@ -1,4 +1,5 @@
 import type { StoredRecord } from './records'
+import { isCandidate, isEntry } from './shape'
 
 /** The first row of the `records` tab (D3). */
 export const HEADER = ['id', 'type', 'updated_at', 'deleted', 'data']
@@ -16,13 +17,19 @@ export function fromRow(row: readonly unknown[]): StoredRecord | null {
   if (!id || id === 'id' || (type !== 'candidate' && type !== 'entry')) return null
   if (!updatedAt || Number.isNaN(Date.parse(updatedAt))) return null
   if (deleted === '1') return { id, type, updatedAt, deleted: true, data: null }
+  let parsed: unknown
   try {
-    const parsed = JSON.parse(data ?? '') as { id?: unknown }
-    if (!parsed || typeof parsed !== 'object' || parsed.id !== id) return null
-    return type === 'candidate'
-      ? { id, type, updatedAt, deleted: false, data: parsed as never }
-      : { id, type, updatedAt, deleted: false, data: parsed as never }
+    parsed = JSON.parse(data ?? '')
   } catch {
     return null
   }
+  // Valid JSON is not enough: a row with a missing field would break every screen.
+  if (type === 'candidate') {
+    return isCandidate(parsed) && parsed.id === id
+      ? { id, type, updatedAt, deleted: false, data: parsed }
+      : null
+  }
+  return isEntry(parsed) && parsed.id === id
+    ? { id, type, updatedAt, deleted: false, data: parsed }
+    : null
 }
