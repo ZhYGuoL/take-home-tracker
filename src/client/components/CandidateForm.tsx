@@ -1,4 +1,12 @@
-import { type FormEvent, type ReactNode, useId, useMemo, useState } from 'react'
+import {
+  type Dispatch,
+  type FormEvent,
+  type ReactNode,
+  type SetStateAction,
+  useId,
+  useMemo,
+  useState,
+} from 'react'
 import {
   deadlineAfterDays,
   deadlineAfterHours,
@@ -63,15 +71,61 @@ export function CandidateForm({
 }: Props) {
   const [draft, setDraft] = useState(initial)
   const [errors, setErrors] = useState<DraftErrors>({})
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const found = validateDraft(draft)
+    setErrors(found)
+    if (Object.keys(found).length === 0) onSubmit(draft)
+  }
+
+  return (
+    <form className="form" onSubmit={submit} noValidate>
+      <div className="form-body thin-scroll">
+        {before}
+        <CandidateFields
+          draft={draft}
+          setDraft={setDraft}
+          errors={errors}
+          mode={mode}
+          zone={zone}
+          roles={roles}
+        />
+      </div>
+      <div className="form-actions">
+        <button type="button" className="control" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="control primary">
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+interface FieldsProps {
+  draft: CandidateDraft
+  setDraft: Dispatch<SetStateAction<CandidateDraft>>
+  errors: DraftErrors
+  /** "add" also asks for a submission that already came in. "paste" gets links from the paste. */
+  mode: 'add' | 'edit' | 'paste'
+  zone: string
+  roles: string[]
+}
+
+/** The candidate's fields, for the add and edit forms and the paste confirm step. */
+export function CandidateFields({ draft, setDraft, errors, mode, zone, roles }: FieldsProps) {
   const rolesId = useId()
   const now = useMemo(() => new Date().toISOString(), [])
+  const [initialZone] = useState(draft.dueZone)
   const zones = useMemo(
     () =>
-      zoneOptions(zone, initial.dueZone).map((z) => ({
+      zoneOptions(zone, initialZone).map((z) => ({
         value: z,
         label: `${z.replaceAll('_', ' ')} · ${zoneName(now, z)}`,
       })),
-    [zone, initial.dueZone, now],
+    [zone, initialZone, now],
   )
   /** The instant a preset chose. A zone change then keeps this instant. Typing clears it. */
   const [presetAt, setPresetAt] = useState<string | null>(null)
@@ -98,183 +152,164 @@ export function CandidateForm({
     set(key, value)
   }
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const found = validateDraft(draft)
-    setErrors(found)
-    if (Object.keys(found).length === 0) onSubmit(draft)
-  }
-
   return (
-    <form className="form" onSubmit={submit} noValidate>
-      <div className="form-body thin-scroll">
-        {before}
-        <fieldset>
-          <legend>CANDIDATE</legend>
-          <Field label="Name" error={errors.name}>
-            <input
-              value={draft.name}
-              onChange={(e) => set('name', e.target.value)}
-              autoComplete="off"
-              data-autofocus
-            />
-          </Field>
-          <Field label="Role">
-            <input
-              value={draft.role}
-              onChange={(e) => set('role', e.target.value)}
-              list={rolesId}
-              autoComplete="off"
-            />
-            <datalist id={rolesId}>
-              {roles.map((r) => (
-                <option key={r} value={r} />
-              ))}
-            </datalist>
-          </Field>
-          <Field label="Source">
-            <select value={draft.source} onChange={(e) => set('source', e.target.value as Source)}>
-              {SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {SOURCE_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Contact">
-            <input
-              value={draft.contacts}
-              placeholder="Email, handle, or phone"
-              onChange={(e) => set('contacts', e.target.value)}
-              autoComplete="off"
-            />
-          </Field>
-        </fieldset>
+    <>
+      <fieldset>
+        <legend>CANDIDATE</legend>
+        <Field label="Name" error={errors.name}>
+          <input
+            value={draft.name}
+            onChange={(e) => set('name', e.target.value)}
+            autoComplete="off"
+            data-autofocus
+          />
+        </Field>
+        <Field label="Role">
+          <input
+            value={draft.role}
+            onChange={(e) => set('role', e.target.value)}
+            list={rolesId}
+            autoComplete="off"
+          />
+          <datalist id={rolesId}>
+            {roles.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
+        </Field>
+        <Field label="Source">
+          <select value={draft.source} onChange={(e) => set('source', e.target.value as Source)}>
+            {SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {SOURCE_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Contact">
+          <input
+            value={draft.contacts}
+            placeholder="Email, handle, or phone"
+            onChange={(e) => set('contacts', e.target.value)}
+            autoComplete="off"
+          />
+        </Field>
+      </fieldset>
 
-        <fieldset>
-          <legend>TAKE-HOME</legend>
-          <Field label="Take-home link" error={errors.takeHomeUrl}>
+      <fieldset>
+        <legend>TAKE-HOME</legend>
+        <Field label="Take-home link" error={errors.takeHomeUrl}>
+          <input
+            value={draft.takeHomeUrl}
+            onChange={(e) => set('takeHomeUrl', e.target.value)}
+            inputMode="url"
+            autoComplete="off"
+          />
+        </Field>
+        <div className="field-row">
+          <Field label="Sent" error={errors.sentDate}>
             <input
-              value={draft.takeHomeUrl}
-              onChange={(e) => set('takeHomeUrl', e.target.value)}
+              type="date"
+              value={draft.sentDate}
+              onChange={(e) => set('sentDate', e.target.value)}
+            />
+          </Field>
+          <Field label="Time">
+            <input
+              type="time"
+              value={draft.sentTime}
+              onChange={(e) => set('sentTime', e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Deadline zone">
+          <select value={draft.dueZone} onChange={(e) => setDueZone(e.target.value)}>
+            {zones.map((z) => (
+              <option key={z.value} value={z.value}>
+                {z.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="field-row">
+          <Field label="Deadline" error={errors.dueDate}>
+            <input
+              type="date"
+              value={draft.dueDate}
+              onChange={(e) => setDue('dueDate', e.target.value)}
+            />
+          </Field>
+          <Field label="Time">
+            <input
+              type="time"
+              value={draft.dueTime}
+              onChange={(e) => setDue('dueTime', e.target.value)}
+            />
+          </Field>
+        </div>
+        <fieldset className="presets">
+          <legend className="visually-hidden">Deadline after sent</legend>
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              className="control small"
+              onClick={() => applyPreset(p.apply)}
+            >
+              <span className="num">{p.label}</span>
+            </button>
+          ))}
+        </fieldset>
+        <DeadlineReadout draft={draft} zone={zone} />
+      </fieldset>
+
+      {mode === 'add' && (
+        <fieldset>
+          <legend>SUBMISSION</legend>
+          <Field label="Submission link" error={errors.submissionUrl}>
+            <input
+              value={draft.submissionUrl}
+              onChange={(e) => set('submissionUrl', e.target.value)}
+              inputMode="url"
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="Repo link" error={errors.repoUrl}>
+            <input
+              value={draft.repoUrl}
+              onChange={(e) => set('repoUrl', e.target.value)}
               inputMode="url"
               autoComplete="off"
             />
           </Field>
           <div className="field-row">
-            <Field label="Sent" error={errors.sentDate}>
+            <Field label="Submitted" error={errors.submittedDate}>
               <input
                 type="date"
-                value={draft.sentDate}
-                onChange={(e) => set('sentDate', e.target.value)}
+                value={draft.submittedDate}
+                onChange={(e) => set('submittedDate', e.target.value)}
               />
             </Field>
-            <Field label="Time">
+            <Field label="Time" error={errors.submittedTime}>
               <input
                 type="time"
-                value={draft.sentTime}
-                onChange={(e) => set('sentTime', e.target.value)}
+                value={draft.submittedTime}
+                onChange={(e) => set('submittedTime', e.target.value)}
               />
             </Field>
           </div>
-          <Field label="Deadline zone">
-            <select value={draft.dueZone} onChange={(e) => setDueZone(e.target.value)}>
-              {zones.map((z) => (
-                <option key={z.value} value={z.value}>
-                  {z.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="field-row">
-            <Field label="Deadline" error={errors.dueDate}>
-              <input
-                type="date"
-                value={draft.dueDate}
-                onChange={(e) => setDue('dueDate', e.target.value)}
-              />
-            </Field>
-            <Field label="Time">
-              <input
-                type="time"
-                value={draft.dueTime}
-                onChange={(e) => setDue('dueTime', e.target.value)}
-              />
-            </Field>
-          </div>
-          <fieldset className="presets">
-            <legend className="visually-hidden">Deadline after sent</legend>
-            {PRESETS.map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                className="control small"
-                onClick={() => applyPreset(p.apply)}
-              >
-                <span className="num">{p.label}</span>
-              </button>
-            ))}
-          </fieldset>
-          <DeadlineReadout draft={draft} zone={zone} />
         </fieldset>
+      )}
 
-        {mode === 'add' && (
-          <fieldset>
-            <legend>SUBMISSION</legend>
-            <Field label="Submission link" error={errors.submissionUrl}>
-              <input
-                value={draft.submissionUrl}
-                onChange={(e) => set('submissionUrl', e.target.value)}
-                inputMode="url"
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="Repo link" error={errors.repoUrl}>
-              <input
-                value={draft.repoUrl}
-                onChange={(e) => set('repoUrl', e.target.value)}
-                inputMode="url"
-                autoComplete="off"
-              />
-            </Field>
-            <div className="field-row">
-              <Field label="Submitted" error={errors.submittedDate}>
-                <input
-                  type="date"
-                  value={draft.submittedDate}
-                  onChange={(e) => set('submittedDate', e.target.value)}
-                />
-              </Field>
-              <Field label="Time" error={errors.submittedTime}>
-                <input
-                  type="time"
-                  value={draft.submittedTime}
-                  onChange={(e) => set('submittedTime', e.target.value)}
-                />
-              </Field>
-            </div>
-          </fieldset>
-        )}
-
-        <fieldset>
-          <legend>NOTES</legend>
-          <Field label="Notes">
-            <textarea rows={3} value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
-          </Field>
-        </fieldset>
-      </div>
-      <div className="form-actions">
-        <button type="button" className="control" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="control primary">
-          {submitLabel}
-        </button>
-      </div>
-    </form>
+      <fieldset>
+        <legend>NOTES</legend>
+        <Field label="Notes">
+          <textarea rows={3} value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
+        </Field>
+      </fieldset>
+    </>
   )
 }
-
 /** The deadline the fields describe, in her own zone. */
 function DeadlineReadout({ draft, zone }: { draft: CandidateDraft; zone: string }) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.dueDate)) return null
@@ -286,7 +321,7 @@ function DeadlineReadout({ draft, zone }: { draft: CandidateDraft; zone: string 
   )
 }
 
-function Field({
+export function Field({
   label,
   error,
   children,
