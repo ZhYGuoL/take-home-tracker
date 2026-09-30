@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { type CandidateDraft, candidateFromDraft, submissionFromDraft } from '../core/draft'
-import { extractWithRules } from '../core/extract/rules'
 import {
   applyFilters,
   countOptions,
@@ -16,13 +15,13 @@ import { DetailPanel } from './components/DetailPanel'
 import { EmptyResults } from './components/EmptyResults'
 import { FilterBar } from './components/FilterBar'
 import { Sheet } from './components/Sheet'
+import { makeExtractor } from './lib/extract'
 import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
 import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
 
-const extract = async (paste: string, ctx: Parameters<typeof extractWithRules>[1]) =>
-  extractWithRules(paste, ctx)
+const extract = makeExtractor()
 
 export function App() {
   const repo = useRepo()

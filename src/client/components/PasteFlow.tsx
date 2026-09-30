@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { parseContacts } from '../../core/contacts'
 import { deadlineAt, formatDateTime, zoneName } from '../../core/deadline'
 import { type DraftErrors, validateDraft } from '../../core/draft'
-import type { ExtractContext, KnownCandidate, Proposal } from '../../core/extract/types'
+import type { ExtractContext, KnownCandidate } from '../../core/extract/types'
 import { normalizeUrl } from '../../core/links'
 import { moveMessage } from '../../core/move'
 import { MAX_PASTE, type PasteDraft, pasteDraft, pasteRecords } from '../../core/paste'
@@ -14,11 +14,12 @@ import {
   type MessageEntry,
   type Source,
 } from '../../core/types'
+import type { Extractor } from '../lib/extract'
 import { newId } from '../lib/time'
 import { useLive, useRepo } from '../store/context'
 import { CandidateFields, Field } from './CandidateForm'
 
-export type Extractor = (paste: string, ctx: ExtractContext) => Promise<Proposal>
+export type { Extractor } from '../lib/extract'
 
 interface Props {
   zone: string
