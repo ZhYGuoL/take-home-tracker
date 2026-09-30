@@ -21,7 +21,7 @@ const app = createApp({
       ? {
           clientId: env.GOOGLE_CLIENT_ID,
           clientSecret: env.GOOGLE_CLIENT_SECRET,
-          sessionSecret: env.SESSION_SECRET ?? FAKE_SESSION_SECRET,
+          sessionSecret: env.SESSION_SECRET || FAKE_SESSION_SECRET,
           endpoints: GOOGLE,
         }
       : {

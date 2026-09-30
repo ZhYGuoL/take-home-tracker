@@ -1,6 +1,13 @@
 # Copy to .dev.vars for `pnpm dev`. Never commit .dev.vars.
-# All of these are optional. Without them, the app runs with the model off.
+# All of these are optional. Without them, the app runs with the model off, and sign-in uses
+# the local fake Google.
 OPENROUTER_API_KEY=
 MODEL_ID=
 # Comma-separated Google emails that may use the model, for example avery@example.com.
 MODEL_ALLOWED_EMAILS=
+# To try real Google sign-in locally, set these from your OAuth client (B3). Its redirect URIs
+# must include http://localhost:5173/auth/google/callback.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Optional here: the output of `openssl rand -base64 48`.
+SESSION_SECRET=
