@@ -143,9 +143,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   // Writes a person's tracker Sheet directly, the way the app would have left it.
   if (path === '/__seed' && req.method === 'POST') {
     const body = JSON.parse(await readBody(req)) as { sub: string; rows: string[][] }
-    let sheet = [...state.sheets.values()].find(
-      (x) => x.owner === body.sub && x.appProperties.takeHomeTracker === 'records-v1',
-    )
+    // The same Sheet the app picks: the oldest of hers, labeled or still only named.
+    let sheet = [...state.sheets.values()]
+      .filter(
+        (x) =>
+          x.owner === body.sub &&
+          (x.appProperties.takeHomeTracker === 'records-v1' || x.title === 'Take-home tracker'),
+      )
+      .sort((a, b) => a.createdTime.localeCompare(b.createdTime))[0]
     if (!sheet) {
       const id = `sheet-${++state.seq}-${randomBytes(4).toString('hex')}`
       sheet = {

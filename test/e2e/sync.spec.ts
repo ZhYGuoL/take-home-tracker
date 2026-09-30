@@ -3,6 +3,13 @@ import { FAKE_GOOGLE_URL } from '../../src/shared/fake-google'
 import { addCandidate, expect, signInAs, test } from './fixtures'
 import { person, seed, submitted } from './seed'
 
+async function sheetsOf(page: Page, owner: string) {
+  const sheets = (await (await page.request.get(`${FAKE_GOOGLE_URL}/__sheets`)).json()) as Array<{
+    owner: string
+  }>
+  return sheets.filter((s) => s.owner === owner)
+}
+
 async function records(page: Page): Promise<string[][]> {
   const sheets = (await (await page.request.get(`${FAKE_GOOGLE_URL}/__sheets`)).json()) as Array<{
     owner: string
@@ -72,6 +79,8 @@ test.describe('signing out', () => {
     page,
   }) => {
     await signInAs(page, 'Casey Nguyen')
+    // Her first visit makes her Sheet. Seed it only after that, or there would be two.
+    await expect.poll(async () => (await sheetsOf(page, 'fake-casey')).length).toBe(1)
     await seed(page, [person('Private Pat')], 'fake-casey')
     await page.getByRole('radio', { name: /All/ }).click()
     await expect(page.getByRole('button', { name: 'Private Pat' })).toBeVisible()
