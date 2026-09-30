@@ -321,3 +321,23 @@ The unit tests passed only because this Mac is in New York.
 
 **Rejected: keep `@date-fns/tz` and avoid the test clock.**
 The bug class would stay, and deadline boundary tests need a controlled clock.
+
+## D16. How the model reads a paste
+
+**Choice.** The model reads meaning. Code does everything exact.
+- The model returns a JSON reading with a fixed schema (structured output): the candidate's name and contacts, role, source, direction, whether she needs to reply, which known candidate it is, the links with their kinds, and two copied phrases: the message's timestamp and her deadline phrase.
+- Code reads those two phrases with the same date reader the rules use (`when.ts`), in her zone.
+  The model never computes a date or an offset.
+- Code drops any link, contact, timestamp, or candidate id that is not in the paste or the known list.
+  An invented value cannot reach her.
+- The client merges the two readings.
+  The model decides who and what: name, role, source, direction, reply, and match.
+  The rules keep what they read exactly: link addresses, contacts, and any time the model left out.
+- If the model is off, slow (12 s), or fails, the rules reading is used, and she sees no difference except the fields.
+- Errors carry only a failure kind and a status code, never text from the paste or the reply.
+
+**Reason.** Language models are good at "who wrote this and what do they want" and bad at time zone arithmetic.
+This split uses each side for what it does well, and every exact value stays testable.
+
+**Rejected: let the model return ISO timestamps.**
+It would have to know her zone, daylight saving, and "yesterday" relative to the paste, and a wrong answer looks right.
