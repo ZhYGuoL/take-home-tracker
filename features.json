@@ -1,0 +1,57 @@
+[
+  {
+    "id": "F1",
+    "description": "Pasting a realistic fictional submission message creates a candidate with name, link, and date prefilled, and she can correct them before saving.",
+    "passes": false
+  },
+  {
+    "id": "F2",
+    "description": "A second paste from the same candidate attaches to that candidate.",
+    "passes": false
+  },
+  {
+    "id": "F3",
+    "description": "Nothing reaches Advanced or Passed without her explicit action.",
+    "passes": false
+  },
+  {
+    "id": "F4",
+    "description": "Overdue and Late are correct, including exactly at the deadline and across time zones.",
+    "passes": false
+  },
+  {
+    "id": "F5",
+    "description": "\"Needs you\" shows exactly the right set.",
+    "passes": false
+  },
+  {
+    "id": "F6",
+    "description": "All filters work alone and combined.",
+    "passes": false
+  },
+  {
+    "id": "F7",
+    "description": "Usable at phone width.",
+    "passes": false
+  },
+  {
+    "id": "F8",
+    "description": "Signed-out visitors see nothing. One user never sees another user's data.",
+    "passes": false
+  },
+  {
+    "id": "F9",
+    "description": "With the model disabled, manual entry still works end to end.",
+    "passes": false
+  },
+  {
+    "id": "F10",
+    "description": "A new person can get their own working copy by following the README.",
+    "passes": false
+  },
+  {
+    "id": "F11",
+    "description": "Lint, typecheck, and tests pass.",
+    "passes": false
+  }
+]
