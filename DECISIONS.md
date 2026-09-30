@@ -151,6 +151,8 @@ The Drive API has no conditional update, so two devices that save at the same ti
 - If Google refuses an access token, the browser asks `/api/session?refresh=1` for a new one.
   If Google also refuses the refresh token, the Worker clears the cookie and she signs in again.
   Saves that did not reach her Sheet stay on the device and go out after she signs in.
+- The home screen icon opens the app in the browser, not as a standalone app.
+  Google sign-in inside a standalone iPhone web app is not reliable.
 - The Google consent screen must be in "In production" status.
   In "Testing" status, only listed test users can sign in, and refresh tokens expire after 7 days.
   With only non-sensitive scopes, Google does not require verification to publish.
