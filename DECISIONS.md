@@ -287,3 +287,20 @@ An allowlist keeps a shared instance from spending the operator's credits on str
 
 **Rejected: a daily counter in Workers KV or a Durable Object.**
 It adds stored state to a Worker that has none, for a limit that the OpenRouter key already enforces.
+
+## D14. How extraction is measured
+
+**Choice.** Two fictional test sets, with different jobs.
+- `eval/cases.ts` (38 cases) is the development set.
+  The rules were written while reading it, so it only guards against regressions.
+- `eval/holdout.ts` (40 cases) is the held-out set.
+  A separate agent wrote it without seeing the extractor or the development set.
+  Every accuracy number in this file comes from it.
+
+A case checks only the fields that the paste states, plus the fields where "nothing" is the right answer: no links, no deadline, no match, no reply needed.
+
+**Reason.** A score on the set that shaped the rules says little.
+A blind set is the closest thing to real pastes that the run can make without real data.
+
+**Rejected: one set for both.**
+The rules scored 37 of 38 on direction and every other field correct on the development set, which is not a believable accuracy.
