@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StoredRecord } from './records'
-import { fromRow, HEADER, toRow } from './rows'
+import { DATA_CELLS, fromRow, HEADER, toRow } from './rows'
 import { candidate, message, stage } from './testing/fixtures'
 
 const c = candidate({ id: 'c-1', name: 'Rowan Okafor' })
@@ -62,5 +62,14 @@ describe('rows', () => {
     ).toBeNull()
     // A whole record still reads.
     expect(fromRow(row('entry', e))).toMatchObject({ data: { ...e, id: 'x-1' } })
+  })
+
+  it('spreads long data over several cells, each under the Sheets limit, and reads it back', () => {
+    const long: StoredRecord = { ...live, data: { ...c, notes: '"'.repeat(60_000) } }
+    const row = toRow(long)
+    expect(row.length).toBeGreaterThan(5)
+    expect(row.length).toBeLessThanOrEqual(4 + DATA_CELLS)
+    for (const cell of row) expect(cell.length).toBeLessThanOrEqual(50_000)
+    expect(fromRow(row)).toEqual(long)
   })
 })

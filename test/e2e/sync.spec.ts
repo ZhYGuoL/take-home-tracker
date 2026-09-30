@@ -51,6 +51,21 @@ test('when Google cannot be reached, she sees Not synced, and Retry catches up',
     .toBe(true)
 })
 
+test('notes that grow past one Sheets cell still reach her Sheet', async ({ page }) => {
+  await seed(page, [person('Long Notes Lou')])
+  await page.getByRole('radio', { name: /All/ }).click()
+  await page.getByRole('button', { name: 'Long Notes Lou' }).click()
+  // Each of these characters takes six in the saved JSON, so the row needs three cells.
+  await page.getByLabel('Notes', { exact: true }).fill('\u0001'.repeat(20_000))
+  await expect
+    .poll(
+      async () =>
+        (await records(page)).filter((r) => r[4]?.includes('Long Notes Lou')).at(-1)?.length,
+    )
+    .toBeGreaterThanOrEqual(7)
+  await expect(page.getByRole('status').filter({ hasText: 'Not synced' })).toHaveCount(0)
+})
+
 test('deleting a candidate removes every row of theirs from her Sheet', async ({ page }) => {
   const c = person('Delete Me', { contacts: ['delete.me@example.com'] })
   const keep = person('Keep Me')

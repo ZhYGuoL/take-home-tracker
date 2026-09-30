@@ -106,10 +106,10 @@ export class SheetsApi {
     return { id, recordsTab: tab }
   }
 
-  /** Every row under the header of the `records` tab. */
+  /** Every row under the header of the `records` tab. Data can fill columns E to Z. */
   async readRows(id: string): Promise<string[][]> {
     const res = await this.call<{ values?: string[][] }>(
-      `${this.access.sheets}/v4/spreadsheets/${id}/values/${q(`${RECORDS}!A2:E`)}`,
+      `${this.access.sheets}/v4/spreadsheets/${id}/values/${q(`${RECORDS}!A2:Z`)}`,
     )
     return res.values ?? []
   }
@@ -117,7 +117,7 @@ export class SheetsApi {
   /** Adds rows at the end. INSERT_ROWS never writes over another device's rows (D3). */
   async append(id: string, rows: string[][]): Promise<void> {
     await this.call(
-      `${this.access.sheets}/v4/spreadsheets/${id}/values/${q(`${RECORDS}!A1:E`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      `${this.access.sheets}/v4/spreadsheets/${id}/values/${q(`${RECORDS}!A1:Z`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       { method: 'POST', body: JSON.stringify({ values: rows }) },
     )
   }

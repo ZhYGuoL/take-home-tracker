@@ -101,7 +101,7 @@ function issue(person: Person, withRefresh: boolean, drive = true) {
   return out
 }
 
-/** "records!A2:E" or "records" to a tab name and a first row index (0-based). */
+/** "records!A2:Z" or "records" to a tab name and a first row index (0-based). */
 function parseRange(range: string): { tab: string; startRow: number } {
   const [tab = '', cells] = decodeURIComponent(range).split('!')
   const m = cells ? /^[A-Z]+(\d+)/.exec(cells) : null
@@ -348,6 +348,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     if (req.method === 'POST' && op === 'append') {
       const body = JSON.parse(await readBody(req)) as { values: string[][] }
+      // Like Sheets: a cell holds at most 50,000 characters, and a new sheet has columns A to Z.
+      if (body.values.some((r) => r.length > 26 || r.some((v) => String(v).length > 50_000))) {
+        return send(res, 400, { error: { code: 400, message: 'cell too long' } }, origin)
+      }
       rows.push(...body.values.map((r) => r.map(String)))
       return send(res, 200, { updates: { updatedRows: body.values.length } }, origin)
     }

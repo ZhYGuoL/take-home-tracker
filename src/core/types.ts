@@ -37,6 +37,9 @@ export interface Deadline {
   dateOnly: boolean
 }
 
+/** The longest notes or message text. It is also the longest paste (D3). */
+export const MAX_TEXT = 20_000
+
 export interface Candidate {
   id: string
   name: string

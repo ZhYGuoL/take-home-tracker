@@ -17,7 +17,7 @@ import {
   zoneName,
 } from '../../core/deadline'
 import { type CandidateDraft, type DraftErrors, validateDraft } from '../../core/draft'
-import { SOURCE_LABELS, SOURCES, type Source } from '../../core/types'
+import { MAX_TEXT, SOURCE_LABELS, SOURCES, type Source } from '../../core/types'
 
 interface Props {
   initial: CandidateDraft
@@ -304,7 +304,12 @@ export function CandidateFields({ draft, setDraft, errors, mode, zone, roles }: 
       <fieldset>
         <legend>NOTES</legend>
         <Field label="Notes">
-          <textarea rows={3} value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
+          <textarea
+            rows={3}
+            maxLength={MAX_TEXT}
+            value={draft.notes}
+            onChange={(e) => set('notes', e.target.value)}
+          />
         </Field>
       </fieldset>
     </>

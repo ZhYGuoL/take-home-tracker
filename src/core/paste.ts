@@ -3,7 +3,14 @@ import { deadlineAt, instantIn, localParts } from './deadline'
 import { type CandidateDraft, candidateFromDraft, emptyDraft } from './draft'
 import type { Proposal } from './extract/types'
 import { normalizeUrl } from './links'
-import type { Applied, Candidate, Link, MessageEntry, Source } from './types'
+import {
+  type Applied,
+  type Candidate,
+  type Link,
+  MAX_TEXT,
+  type MessageEntry,
+  type Source,
+} from './types'
 
 /** The confirm step after a paste. Every field is what she sees and can change. */
 export interface PasteDraft {
@@ -26,7 +33,7 @@ export interface PasteDraft {
   dueZone: string
 }
 
-export const MAX_PASTE = 20_000
+export const MAX_PASTE = MAX_TEXT
 
 const isSubmission = (p: Proposal) =>
   p.direction === 'in' && p.links.some((l) => l.kind === 'submission' || l.kind === 'repo')

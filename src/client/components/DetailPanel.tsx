@@ -20,6 +20,7 @@ import { moveMessage } from '../../core/move'
 import {
   type Entry,
   type LinkKind,
+  MAX_TEXT,
   type MessageEntry,
   SOURCE_LABELS,
   STAGE_LABELS,
@@ -483,6 +484,7 @@ function MessageFields({
         <span className="field-label">Message</span>
         <textarea
           rows={3}
+          maxLength={MAX_TEXT}
           value={text}
           onChange={(e) => setText(e.target.value)}
           // biome-ignore lint/a11y/noAutofocus: she just asked for this field
@@ -542,7 +544,12 @@ function Notes({ value, onSave }: { value: string; onSave: (v: string) => void }
   return (
     <label className="field">
       <span className="field-label">Notes</span>
-      <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+      <textarea
+        rows={3}
+        maxLength={MAX_TEXT}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
     </label>
   )
 }

@@ -96,8 +96,10 @@ So the personal data really goes away, and it is not only hidden.
   The wait keeps two devices from deleting rows by position at the same moment.
 - The rules are one pure function, `purgePlan` in `src/core/purge.ts`, which reads only the Sheet rows.
 
-A pasted message is at most 20,000 characters.
+A pasted message, a typed message, and notes are each at most 20,000 characters.
 A Sheets cell holds at most 50,000.
+JSON can make text up to six times longer, so data longer than one cell goes on in the next cells, up to column Z.
+A row that Sheets refuses would stop every save after it, so no row may be too long.
 
 **Reason.**
 - If the recruiter moves a wrongly matched message to another candidate, both candidates recompute correctly.
