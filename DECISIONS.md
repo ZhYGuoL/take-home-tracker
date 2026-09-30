@@ -407,3 +407,23 @@ The model stays off: the Worker needs both `OPENROUTER_API_KEY` and `MODEL_ID`, 
 **Reason.** The brief says to measure, not assume.
 On 40 cases, one case is 2.5 points, so the rule counts cases, not percentages.
 Until a model beats the rules on the blind set, adding one costs money and a network wait for no known gain.
+
+## D18. How the browser and her Sheet stay in step
+
+**Choice.**
+- The browser keeps two things in IndexedDB, under her Google account id: a copy of her records, and a queue of saves that have not reached the Sheet.
+- A save goes into the queue first, then the app appends it to the Sheet. A closed tab or a dropped connection loses nothing.
+- If Google cannot be reached, the header says "Not synced" with Retry. The saves stay in the queue and go out on the next try.
+- A pull reads the whole `records` tab. The Sheet is the truth, plus whatever is still in the queue.
+  The app pulls on load, when she returns to the tab, when the window gets focus, and each minute while the tab is visible.
+- Deleting a candidate appends the delete, then deletes every row of that candidate and its entries from the Sheet.
+  Other devices drop the candidate on their next pull.
+- The app finds her Sheet by a Drive label (`appProperties`). It also looks for an unlabeled file with the tracker's name, so a setup that failed halfway never leaves a second Sheet.
+- The readable `candidates` tab is rewritten at most once every 20 seconds after a change.
+- Signing out revokes the Google grant, clears the cookie, and deletes her copy and queue from this browser.
+
+**Reason.** She uses a phone and a laptop, sometimes on a bad connection.
+A queue with a truth-on-pull rule is simple, never overwrites another device's rows, and makes deletes real.
+
+**Rejected: write through to the Sheet on every change, with no local copy.**
+Every screen would wait on Google, and a dropped connection would lose the change.
