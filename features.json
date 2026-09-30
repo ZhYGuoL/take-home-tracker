@@ -52,6 +52,6 @@
   {
     "id": "F11",
     "description": "Lint, typecheck, and tests pass.",
-    "passes": false
+    "passes": true
   }
 ]
