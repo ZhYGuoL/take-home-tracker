@@ -113,6 +113,10 @@ A Sheets cell holds at most 50,000.
 JSON can make text up to six times longer, so data longer than one cell goes on in the next cells, up to column Z.
 A row that Sheets refuses would stop every save after it, so no row may be too long.
 
+She can edit the `records` tab by hand, so the app checks every field of every row it reads.
+A row that is not a whole record is skipped, and a bad row never stops the others.
+The purge never deletes a row that the app cannot read.
+
 **Reason.**
 - If the recruiter moves a wrongly matched message to another candidate, both candidates recompute correctly.
   No stored field can go stale.
