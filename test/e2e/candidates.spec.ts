@@ -195,3 +195,20 @@ test('Tab stays inside the add dialog, and focus returns to Add when it closes',
   await page.keyboard.press('Escape')
   await expect(add).toBeFocused()
 })
+
+test('a row she just changed stays where it is in the list', async ({ page }, info) => {
+  test.skip(info.project.name === 'iphone', 'on a phone the panel covers the list')
+  await addCandidate(page, { name: 'Vik Rao' })
+  await page.getByRole('button', { name: 'Close' }).click()
+  await addCandidate(page, { name: 'Wen Zhou' })
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect
+    .poll(() => page.locator('.row-name').allInnerTexts())
+    .toEqual(['Wen Zhou', 'Vik Rao'])
+  await page.getByRole('button', { name: 'Vik Rao' }).click()
+  await stageButton(page, 'Advanced').click()
+  await expect(stageButton(page, 'Advanced')).toHaveAttribute('aria-pressed', 'true')
+  await expect
+    .poll(() => page.locator('.row-name').allInnerTexts())
+    .toEqual(['Wen Zhou', 'Vik Rao'])
+})

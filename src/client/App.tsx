@@ -11,6 +11,7 @@ import { CandidateForm } from './components/CandidateForm'
 import { CandidateTable } from './components/CandidateTable'
 import { DetailPanel } from './components/DetailPanel'
 import { Sheet, SheetHeader } from './components/Sheet'
+import { useStableOrder } from './lib/order'
 import { newId, useNow, viewerZone } from './lib/time'
 import { close, navigate, useSearch } from './lib/url'
 import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/context'
@@ -56,6 +57,8 @@ export function App() {
     [rows],
   )
 
+  const ordered = useStableOrder(sorted, (r) => r.candidate.id, 'all')
+
   const openSubmission = (row: Row) => {
     const link = row.derived.submission ?? row.derived.repo
     if (!link || row.derived.stage !== 'submitted') return
@@ -96,7 +99,7 @@ export function App() {
           </div>
         ) : (
           <CandidateTable
-            rows={sorted}
+            rows={ordered}
             now={now}
             zone={zone}
             selectedId={openId}
