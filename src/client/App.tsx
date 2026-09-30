@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
-import { byTime } from '../core/derive'
 import {
   type CandidateDraft,
   candidateFromDraft,
   emptyDraft,
   submissionFromDraft,
 } from '../core/draft'
+import { sortRows } from '../core/sort'
 import type { Entry } from '../core/types'
 import { CandidateForm } from './components/CandidateForm'
 import { CandidateTable } from './components/CandidateTable'
@@ -19,9 +19,13 @@ import { type Row, useLive, useRepo, useRows, useSaveStatus } from './store/cont
 export function App() {
   const repo = useRepo()
   const saveStatus = useSaveStatus()
-  const rows = useRows()
-  const { entries } = useLive()
-  const now = useNow()
+  const { candidates, entries } = useLive()
+  const deadlines = useMemo(
+    () => candidates.flatMap((c) => (c.deadline ? [Date.parse(c.deadline.at)] : [])),
+    [candidates],
+  )
+  const now = useNow(deadlines)
+  const rows = useRows(now)
   const zone = useMemo(viewerZone, [])
   const search = new URLSearchParams(useSearch())
   const openId = search.get('c')
@@ -45,18 +49,7 @@ export function App() {
     navigate({ new: null, c: candidate.id }, 'replace')
   }
 
-  const sorted = useMemo(
-    () =>
-      [...rows].sort(
-        (a, b) =>
-          -byTime(
-            { at: a.derived.lastActivityAt, id: a.candidate.id },
-            { at: b.derived.lastActivityAt, id: b.candidate.id },
-          ),
-      ),
-    [rows],
-  )
-
+  const sorted = useMemo(() => sortRows(rows, 'all'), [rows])
   const ordered = useStableOrder(sorted, (r) => r.candidate.id, 'all')
 
   const openSubmission = (row: Row) => {

@@ -150,6 +150,12 @@
   background: var(--purple-soft);
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* Table */
 .table-scroll {
   overflow-x: auto;
@@ -157,7 +163,7 @@
 
 .table {
   width: 100%;
-  min-width: 1000px;
+  min-width: 1180px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -167,6 +173,9 @@
 }
 .col-stage {
   width: 112px;
+}
+.col-flags {
+  width: 196px;
 }
 .col-deadline {
   width: 170px;

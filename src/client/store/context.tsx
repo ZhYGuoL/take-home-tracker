@@ -1,7 +1,8 @@
 import { createContext, type ReactNode, useContext, useMemo, useSyncExternalStore } from 'react'
-import { type Derived, derive } from '../../core/derive'
+import { derive } from '../../core/derive'
+import type { FactRow } from '../../core/filters'
+import { flagsOf, needsYou } from '../../core/flags'
 import type { Live } from '../../core/records'
-import type { Candidate } from '../../core/types'
 import type { Repo } from './repo'
 
 const RepoContext = createContext<Repo | null>(null)
@@ -26,15 +27,18 @@ export function useLive(): Live {
   return useSyncExternalStore(repo.subscribe, repo.getSnapshot)
 }
 
-export interface Row {
-  candidate: Candidate
-  derived: Derived
-}
+export type Row = FactRow
 
-export function useRows(): Row[] {
+/** Every candidate with its stage, flags, and "Needs you" at `now`. */
+export function useRows(now: number): Row[] {
   const { candidates, entries } = useLive()
   return useMemo(
-    () => candidates.map((candidate) => ({ candidate, derived: derive(candidate, entries) })),
-    [candidates, entries],
+    () =>
+      candidates.map((candidate) => {
+        const derived = derive(candidate, entries)
+        const flags = flagsOf(candidate, derived, entries, now)
+        return { candidate, derived, flags, needsYou: needsYou(derived, flags) }
+      }),
+    [candidates, entries, now],
   )
 }

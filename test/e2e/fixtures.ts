@@ -37,3 +37,13 @@ export async function addCandidate(page: Page, c: NewCandidate) {
 export function stageButton(page: Page, name: string) {
   return page.getByRole('toolbar', { name: 'Stage' }).getByRole('button', { name, exact: true })
 }
+
+/** The names in the list, top to bottom, on either layout. */
+export function shownNames(page: Page) {
+  return page.locator('.row-name').allInnerTexts()
+}
+
+/** The row or list item for one candidate. */
+export function rowOf(page: Page, name: string) {
+  return page.locator('tbody tr, li.list-item').filter({ hasText: name })
+}

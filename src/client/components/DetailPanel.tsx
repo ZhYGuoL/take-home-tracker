@@ -20,6 +20,7 @@ import {
 import { newId } from '../lib/time'
 import type { Row } from '../store/context'
 import { useRepo } from '../store/context'
+import { FlagBadges } from './Badges'
 import { CandidateForm } from './CandidateForm'
 import { SheetHeader } from './Sheet'
 
@@ -47,7 +48,7 @@ export function DetailPanel({
   const repo = useRepo()
   const c = row.candidate
   const [editing, setEditing] = useState(false)
-  const [addingLink, setAddingLink] = useState(false)
+  const [adding, setAdding] = useState<'link' | 'message' | null>(null)
 
   if (editing) {
     const save = (draft: CandidateDraft) => {
@@ -81,6 +82,14 @@ export function DetailPanel({
     })
   }
 
+  const markReplied = () =>
+    void repo.saveEntry({
+      id: newId(),
+      candidateId: c.id,
+      kind: 'replied',
+      at: new Date().toISOString(),
+    })
+
   return (
     <>
       <SheetHeader
@@ -90,9 +99,18 @@ export function DetailPanel({
       />
       <div className="detail thin-scroll">
         <StageControl stage={row.derived.stage} onChange={setStage} />
+        <FlagBadges flags={row.flags} />
         <Facts row={row} now={now} zone={zone} onOpenSubmission={onOpenSubmission} />
         <div className="actions">
-          <button type="button" className="control" onClick={() => setAddingLink(true)}>
+          {row.flags.needsReply && (
+            <button type="button" className="control primary" onClick={markReplied}>
+              Replied
+            </button>
+          )}
+          <button type="button" className="control" onClick={() => setAdding('message')}>
+            Add message
+          </button>
+          <button type="button" className="control" onClick={() => setAdding('link')}>
             Add link
           </button>
           <button type="button" className="control" onClick={() => setEditing(true)}>
@@ -103,7 +121,12 @@ export function DetailPanel({
             onConfirm={() => void repo.deleteCandidate(c).then(onDeleted)}
           />
         </div>
-        {addingLink && <LinkFields candidate={c} zone={zone} onDone={() => setAddingLink(false)} />}
+        {adding === 'link' && (
+          <LinkFields candidate={c} zone={zone} onDone={() => setAdding(null)} />
+        )}
+        {adding === 'message' && (
+          <MessageFields candidate={c} zone={zone} onDone={() => setAdding(null)} />
+        )}
         <Notes
           key={c.id}
           value={c.notes}
@@ -346,6 +369,106 @@ function LinkFields({
       <div className="actions">
         <button type="submit" className="control primary">
           Add link
+        </button>
+        <button type="button" className="control" onClick={onDone}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/** Logs a message by hand: what the candidate sent, or what she sent them. */
+function MessageFields({
+  candidate,
+  zone,
+  onDone,
+}: {
+  candidate: Row['candidate']
+  zone: string
+  onDone: () => void
+}) {
+  const repo = useRepo()
+  const [direction, setDirection] = useState<'in' | 'out'>('in')
+  const [text, setText] = useState('')
+  const [needsReply, setNeedsReply] = useState(true)
+  const [when, setWhen] = useState(() => localParts(new Date().toISOString(), zone))
+
+  const [whenError, setWhenError] = useState<string | null>(null)
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const missing = !when.date ? 'Date needed' : !when.time ? 'Time needed' : null
+    setWhenError(missing)
+    if (missing) return
+    void repo.saveEntry({
+      id: newId(),
+      candidateId: candidate.id,
+      kind: 'message',
+      at: instantIn(when.date, when.time, zone),
+      direction,
+      text: text.trim(),
+      source: candidate.source,
+      links: [],
+      needsReply: direction === 'in' && needsReply,
+    })
+    onDone()
+  }
+
+  return (
+    <form className="inline-form" onSubmit={submit} noValidate aria-label="Add a message">
+      <label className="field">
+        <span className="field-label">From</span>
+        <select value={direction} onChange={(e) => setDirection(e.target.value as 'in' | 'out')}>
+          <option value="in">{candidate.name}</option>
+          <option value="out">Me</option>
+        </select>
+      </label>
+      <div className="field-row">
+        <label className="field" data-invalid={whenError ? true : undefined}>
+          <span className="field-label">
+            Date
+            {whenError && <span className="field-error">{whenError}</span>}
+          </span>
+          <input
+            type="date"
+            value={when.date}
+            onChange={(e) => setWhen({ ...when, date: e.target.value })}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Time</span>
+          <input
+            type="time"
+            value={when.time}
+            onChange={(e) => setWhen({ ...when, time: e.target.value })}
+          />
+        </label>
+      </div>
+      <label className="field">
+        <span className="field-label">Message</span>
+        <textarea
+          rows={3}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          // biome-ignore lint/a11y/noAutofocus: she just asked for this field
+          autoFocus
+        />
+      </label>
+      {direction === 'in' && (
+        <label className="option">
+          <input
+            className="option-check"
+            type="checkbox"
+            checked={needsReply}
+            onChange={(e) => setNeedsReply(e.target.checked)}
+          />
+          <span className="option-label">Needs reply</span>
+        </label>
+      )}
+      <div className="actions">
+        <button type="submit" className="control primary">
+          Add message
         </button>
         <button type="button" className="control" onClick={onDone}>
           Cancel

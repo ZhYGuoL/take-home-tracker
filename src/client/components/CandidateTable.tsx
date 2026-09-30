@@ -3,7 +3,7 @@ import { shortUrl } from '../../core/links'
 import { SOURCE_LABELS } from '../../core/types'
 import { useIsWide } from '../lib/media'
 import type { Row } from '../store/context'
-import { StageBadge } from './Badges'
+import { FlagBadges, StageBadge } from './Badges'
 
 interface Props {
   rows: Row[]
@@ -56,6 +56,7 @@ function Table({ rows, now, zone, selectedId, onOpen, onOpenSubmission }: Props)
           <col />
           <col className="col-role" />
           <col className="col-stage" />
+          <col className="col-flags" />
           <col className="col-deadline" />
           <col className="col-source" />
           <col className="col-activity" />
@@ -66,6 +67,7 @@ function Table({ rows, now, zone, selectedId, onOpen, onOpenSubmission }: Props)
             <th scope="col">NAME</th>
             <th scope="col">ROLE</th>
             <th scope="col">STAGE</th>
+            <th scope="col">FLAGS</th>
             <th scope="col">DEADLINE</th>
             <th scope="col">SOURCE</th>
             <th scope="col">LAST ACTIVITY</th>
@@ -93,6 +95,9 @@ function Table({ rows, now, zone, selectedId, onOpen, onOpenSubmission }: Props)
                 <td className="truncate">{c.role || <span className="muted">None</span>}</td>
                 <td>
                   <StageBadge stage={row.derived.stage} />
+                </td>
+                <td>
+                  <FlagBadges flags={row.flags} />
                 </td>
                 <td>
                   <Deadline row={row} now={now} zone={zone} />
@@ -130,6 +135,7 @@ function List({ rows, now, onOpen }: Props) {
                 </span>
                 <span className="num">{d ? `due ${relative(d.at, now)}` : 'no deadline'}</span>
               </span>
+              <FlagBadges flags={row.flags} />
             </button>
           </li>
         )
